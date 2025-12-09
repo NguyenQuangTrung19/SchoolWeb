@@ -1,35 +1,6 @@
 // src/api/subjectsApi.js
 
-let mockSubjects = [
-  {
-    id: 1,
-    name: "Toán",
-    code: "MATH",
-    grade: 10,
-    is_optional: false,
-    status: "ACTIVE",
-  },
-  {
-    id: 2,
-    name: "Ngữ văn",
-    code: "LIT",
-    grade: 10,
-    is_optional: false,
-    status: "ACTIVE",
-  },
-  {
-    id: 3,
-    name: "Tiếng Anh",
-    code: "ENG",
-    grade: 11,
-    is_optional: false,
-    status: "ACTIVE",
-  },
-];
-
-let nextSubjectId = 4;
-
-const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export async function getSubjects({
   page = 0,
@@ -37,65 +8,42 @@ export async function getSubjects({
   search = "",
   grade = "ALL",
 }) {
-  await sleep(300);
+  const params = new URLSearchParams({
+    page,
+    pageSize,
+    search,
+    grade,
+  });
 
-  let data = [...mockSubjects];
-
-  if (search) {
-    const keyword = search.toLowerCase();
-    data = data.filter(
-      (s) =>
-        s.name.toLowerCase().includes(keyword) ||
-        (s.code && s.code.toLowerCase().includes(keyword))
-    );
-  }
-
-  if (grade !== "ALL") {
-    data = data.filter((s) => String(s.grade) === String(grade));
-  }
-
-  const total = data.length;
-  const start = page * pageSize;
-  const end = start + pageSize;
-  const pageData = data.slice(start, end);
-
-  return { data: pageData, total };
+  const res = await fetch(`${API_URL}/subjects?${params.toString()}`);
+  if (!res.ok) throw new Error("Không tải được danh sách môn học");
+  return res.json(); // { data, total }
 }
 
 export async function createSubject(payload) {
-  await sleep(300);
-  const newSubject = {
-    id: nextSubjectId++,
-    name: payload.name,
-    code: payload.code || "",
-    grade: payload.grade ? parseInt(payload.grade, 10) : null,
-    is_optional: !!payload.is_optional,
-    status: payload.status || "ACTIVE",
-  };
-  mockSubjects.push(newSubject);
-  return newSubject;
+  const res = await fetch(`${API_URL}/subjects`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Không tạo được môn học");
+  return res.json();
 }
 
 export async function updateSubject(id, payload) {
-  await sleep(300);
-  mockSubjects = mockSubjects.map((s) =>
-    s.id === id
-      ? {
-          ...s,
-          ...payload,
-          grade: payload.grade ? parseInt(payload.grade, 10) : s.grade,
-          is_optional:
-            payload.is_optional !== undefined
-              ? !!payload.is_optional
-              : s.is_optional,
-        }
-      : s
-  );
-  return mockSubjects.find((s) => s.id === id);
+  const res = await fetch(`${API_URL}/subjects/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Không cập nhật được môn học");
+  return res.json();
 }
 
 export async function deleteSubject(id) {
-  await sleep(300);
-  mockSubjects = mockSubjects.filter((s) => s.id !== id);
+  const res = await fetch(`${API_URL}/subjects/${id}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Không xóa được môn học");
   return true;
 }

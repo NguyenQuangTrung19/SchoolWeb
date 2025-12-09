@@ -9,6 +9,7 @@ const collapsedWidth = 64;
 
 export default function AppLayout({ children }) {
   const [open, setOpen] = useState(true);
+  const sidebarOffset = -180;
 
   const handleDrawerToggle = () => {
     setOpen(!open);
@@ -37,11 +38,11 @@ export default function AppLayout({ children }) {
           mt: 8,
           transition: "margin 0.3s, width 0.3s",
           marginLeft: open
-            ? `${drawerWidth - 148}px`
-            : `${collapsedWidth - 4}px`,
+            ? `${drawerWidth + sidebarOffset}px`
+            : `${collapsedWidth + sidebarOffset + 150}px`,
           width: open
-            ? `calc(100% - ${drawerWidth - 8}px)`
-            : `calc(100% - ${collapsedWidth - 4}px)`,
+            ? `calc(100% - ${drawerWidth + sidebarOffset}px)`
+            : `calc(100% - ${collapsedWidth + sidebarOffset}px)`,
         }}
       >
         {children}

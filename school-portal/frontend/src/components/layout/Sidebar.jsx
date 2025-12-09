@@ -135,12 +135,20 @@ export default function Sidebar({ open, drawerWidth }) {
         transition: "width 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
         "& .MuiDrawer-paper": {
           width: isCollapsed ? collapsedWidth : drawerWidth,
-          overflowX: "hidden",
+          overflow: "hidden",
           transition: "width 0.35s cubic-bezier(0.4, 0, 0.2, 1)",
           boxSizing: "border-box",
-          borderRight: "none",
+
+          /* 🌟 Bo góc Sidebar */
+          // borderRadius: "16px",
+
+          /* 🌟 Gradient nền */
           background: `linear-gradient(180deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 40%, #0b1020 100%)`,
           color: "#fff",
+
+          /* Shadow để Sidebar nổi hơn */
+          boxShadow: "0px 4px 20px rgba(0,0,0,0.25)",
+
           display: "flex",
           flexDirection: "column",
         },
@@ -170,7 +178,7 @@ export default function Sidebar({ open, drawerWidth }) {
             sx={{
               width: 32,
               height: 32,
-              borderRadius: "12px",
+              // borderRadius: "12px",
               backgroundColor: "rgba(255,255,255,0.15)",
               display: "flex",
               alignItems: "center",
@@ -232,7 +240,7 @@ export default function Sidebar({ open, drawerWidth }) {
                     position: "relative",
                     my: 0.5,
                     px: isCollapsed ? 1 : 1.5,
-                    borderRadius: "10px",
+                    // borderRadius: "10px",
                     minHeight: 40,
                     justifyContent: isCollapsed ? "center" : "flex-start",
                     transition:
@@ -256,7 +264,7 @@ export default function Sidebar({ open, drawerWidth }) {
                           top: 6,
                           bottom: 6,
                           width: 3,
-                          borderRadius: 999,
+                          // borderRadius: 999,
                           backgroundColor: "#fff",
                         }
                       : {},
