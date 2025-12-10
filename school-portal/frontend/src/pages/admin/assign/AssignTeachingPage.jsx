@@ -85,6 +85,14 @@ export default function AdminAssignTeachingPage() {
   const teachersQuery = useQuery({
     queryKey: ["teachers", "all"],
     queryFn: () => getAllTeachers(),
+    // đảm bảo data luôn là mảng
+    select: (res) => {
+      // nếu backend trả { data, total } thì lấy res.data
+      if (res && Array.isArray(res.data)) return res.data;
+      // nếu getAllTeachers đã trả sẵn array thì dùng luôn
+      if (Array.isArray(res)) return res;
+      return [];
+    },
   });
 
   // Load assignments

@@ -1,49 +1,20 @@
 // src/api/subjectsApi.js
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { apiGet, apiPost, apiPut, apiDelete } from "./http";
 
-export async function getSubjects({
-  page = 0,
-  pageSize = 10,
-  search = "",
-  grade = "ALL",
-}) {
-  const params = new URLSearchParams({
-    page,
-    pageSize,
-    search,
-    grade,
-  });
-
-  const res = await fetch(`${API_URL}/subjects?${params.toString()}`);
-  if (!res.ok) throw new Error("Không tải được danh sách môn học");
-  return res.json(); // { data, total }
+export function getSubjects(params) {
+  const q = new URLSearchParams(params).toString();
+  return apiGet(`/subjects?${q}`);
 }
 
-export async function createSubject(payload) {
-  const res = await fetch(`${API_URL}/subjects`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error("Không tạo được môn học");
-  return res.json();
+export function createSubject(payload) {
+  return apiPost("/subjects", payload);
 }
 
-export async function updateSubject(id, payload) {
-  const res = await fetch(`${API_URL}/subjects/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error("Không cập nhật được môn học");
-  return res.json();
+export function updateSubject(id, payload) {
+  return apiPut(`/subjects/${id}`, payload);
 }
 
-export async function deleteSubject(id) {
-  const res = await fetch(`${API_URL}/subjects/${id}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Không xóa được môn học");
-  return true;
+export function deleteSubject(id) {
+  return apiDelete(`/subjects/${id}`);
 }

@@ -1,6 +1,7 @@
 // src/teachers/dto/create-teacher.dto.ts
 import {
-  IsEnum,
+  IsEmail,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -10,22 +11,34 @@ import {
 export class CreateTeacherDto {
   @IsString()
   @MaxLength(20)
-  id: string; // mã GV
+  id: string;
 
   @IsOptional()
   @IsInt()
-  user_id?: number;
+  userid?: number;
+
+  @IsOptional()
+  @IsString()
+  username?: string;
 
   @IsString()
   @MaxLength(100)
-  full_name: string;
+  fullname: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
   @IsOptional()
   @IsString()
-  dob?: string; // "YYYY-MM-DD"
+  phone?: string;
 
   @IsOptional()
-  @IsEnum(['M', 'F', 'O'])
+  @IsString()
+  dob?: Date; // "YYYY-MM-DD"
+
+  @IsOptional()
+  @IsIn(['M', 'F', 'O'])
   gender?: 'M' | 'F' | 'O';
 
   @IsOptional()
@@ -34,21 +47,18 @@ export class CreateTeacherDto {
 
   @IsOptional()
   @IsString()
-  phone?: string;
+  citizenid?: string;
 
   @IsOptional()
   @IsString()
-  citizen_id?: string;
+  mainsubject?: string;
 
   @IsOptional()
-  @IsString()
-  main_subject?: string;
-
-  @IsOptional()
-  @IsEnum(['ACTIVE', 'INACTIVE'])
+  @IsIn(['ACTIVE', 'INACTIVE'])
   status?: 'ACTIVE' | 'INACTIVE';
 
   @IsOptional()
   @IsString()
   note?: string;
+  user_name: string;
 }

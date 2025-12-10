@@ -13,10 +13,10 @@ export class TeacherEntity {
   id: string; // "GV001"
 
   @Column({ type: 'int', nullable: true })
-  user_id: number | null;
+  userid: number | null;
 
   @Column({ type: 'varchar', length: 100 })
-  full_name: string;
+  fullname: string;
 
   @Column({ type: 'date', nullable: true })
   dob: Date | null;
@@ -35,10 +35,10 @@ export class TeacherEntity {
   phone: string | null;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  citizen_id: string | null;
+  citizenid: string | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  main_subject: string | null; // Toán, Ngữ văn...
+  mainsubject: string | null;
 
   @Column({
     type: 'enum',
@@ -51,8 +51,8 @@ export class TeacherEntity {
   note: string | null;
 
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updatedAt: Date;
 }

@@ -1,5 +1,8 @@
+// src/students/dto/create-student.dto.ts
+
 import {
-  IsEnum,
+  IsEmail,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -9,22 +12,34 @@ import {
 export class CreateStudentDto {
   @IsString()
   @MaxLength(20)
-  id: string; // cho phép FE tự nhập HS001, hoặc sau này backend auto-gen
+  id: string; // mã HS, ví dụ "HS001"
 
   @IsOptional()
   @IsInt()
-  user_id?: number;
+  userid?: number;
+
+  @IsOptional()
+  @IsString()
+  username?: string;
 
   @IsString()
   @MaxLength(100)
-  full_name: string;
+  fullname: string;
+
+  @IsOptional()
+  @IsEmail()
+  email?: string;
 
   @IsOptional()
   @IsString()
-  dob?: string; // "YYYY-MM-DD"
+  phone?: string;
 
   @IsOptional()
-  @IsEnum(['M', 'F', 'O'])
+  @IsString()
+  dob?: Date; // "YYYY-MM-DD"
+
+  @IsOptional()
+  @IsIn(['M', 'F', 'O'])
   gender?: 'M' | 'F' | 'O';
 
   @IsOptional()
@@ -49,10 +64,10 @@ export class CreateStudentDto {
 
   @IsOptional()
   @IsString()
-  guardian_citizen_id?: string;
+  guardian_citizenid?: string;
 
   @IsOptional()
-  @IsEnum(['ACTIVE', 'INACTIVE'])
+  @IsIn(['ACTIVE', 'INACTIVE'])
   status?: 'ACTIVE' | 'INACTIVE';
 
   @IsOptional()

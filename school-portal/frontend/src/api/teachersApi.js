@@ -1,56 +1,26 @@
 // src/api/teachersApi.js
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { apiGet, apiPost, apiPut, apiDelete } from "./http";
 
-export async function getTeachers({
-  page = 0,
-  pageSize = 10,
-  search = "",
-  subject = "ALL",
-  status = "ALL",
-}) {
-  const params = new URLSearchParams({
-    page,
-    pageSize,
-    search,
-    subject,
-    status,
-  });
-
-  const res = await fetch(`${API_URL}/teachers?${params.toString()}`);
-  if (!res.ok) throw new Error("Không tải được danh sách giáo viên");
-  return res.json(); // { data, total }
+export function getTeachers(params) {
+  const q = new URLSearchParams(params).toString();
+  return apiGet(`/teachers?${q}`);
 }
 
-export async function createTeacher(payload) {
-  const res = await fetch(`${API_URL}/teachers`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error("Không tạo được giáo viên");
-  return res.json();
+export function createTeacher(payload) {
+  return apiPost("/teachers", payload);
 }
 
-export async function updateTeacher(id, payload) {
-  const res = await fetch(`${API_URL}/teachers/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error("Không cập nhật được giáo viên");
-  return res.json();
+export function updateTeacher(id, payload) {
+  return apiPut(`/teachers/${id}`, payload);
 }
 
-export async function deleteTeacher(id) {
-  const res = await fetch(`${API_URL}/teachers/${id}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Không xóa được giáo viên");
-  return true;
+export function deleteTeacher(id) {
+  return apiDelete(`/teachers/${id}`);
 }
 
 export async function getAllTeachers() {
-  await sleep(200); // cho đồng bộ với các API mock khác
-  return [...mockTeachers]; // trả về mảng giáo viên
+  const res = await apiGet("/teachers?page=0&pageSize=9999");
+  // nếu backend trả { data, total }
+  return res.data || [];
 }

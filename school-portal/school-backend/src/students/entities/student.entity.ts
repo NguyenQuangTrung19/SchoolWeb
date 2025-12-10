@@ -15,10 +15,10 @@ export class StudentEntity {
   id: string; // "HS001"
 
   @Column({ type: 'int', nullable: true })
-  user_id: number | null;
+  userid: number | null;
 
   @Column({ type: 'varchar', length: 100 })
-  full_name: string;
+  fullname: string;
 
   @Column({ type: 'date', nullable: true })
   dob: Date | null;
@@ -50,7 +50,7 @@ export class StudentEntity {
   guardian_job: string | null;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
-  guardian_citizen_id: string | null;
+  guardian_citizenid: string | null;
 
   @Column({
     type: 'enum',
@@ -63,8 +63,8 @@ export class StudentEntity {
   note: string | null;
 
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updatedAt: Date;
 }

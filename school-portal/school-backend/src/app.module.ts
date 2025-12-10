@@ -5,6 +5,11 @@ import { ClassesModule } from './classes/classes.module';
 import { StudentsModule } from './students/students.module';
 import { SubjectsModule } from './subjects/subjects.module';
 import { TeachersModule } from './teachers/teachers.module';
+import { ScoresModule } from './scores/scores.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { MaterialsModule } from './materials/materials.module';
+import { ClassSubjectsModule } from './class_subjects/class-subjects.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -23,6 +28,11 @@ import { TeachersModule } from './teachers/teachers.module';
     StudentsModule,
     SubjectsModule,
     TeachersModule,
+    ScoresModule,
+    AttendanceModule,
+    MaterialsModule,
+    ClassSubjectsModule,
+    UsersModule,
   ],
 })
 export class AppModule {}

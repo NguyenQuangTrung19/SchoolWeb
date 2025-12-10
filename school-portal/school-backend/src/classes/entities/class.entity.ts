@@ -54,8 +54,8 @@ export class ClassEntity {
   students?: StudentEntity[];
 
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updatedAt: Date;
 }

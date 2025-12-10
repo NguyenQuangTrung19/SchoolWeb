@@ -32,8 +32,8 @@ export class SubjectEntity {
   status: 'ACTIVE' | 'INACTIVE';
 
   @CreateDateColumn()
-  created_at: Date;
+  createdAt: Date;
 
   @UpdateDateColumn()
-  updated_at: Date;
+  updatedAt: Date;
 }
