@@ -41,14 +41,14 @@ export default function TeacherClassesPage() {
   });
 
   const studentsQuery = useQuery({
-    queryKey: ["students-of-selected", selectedClass?.class_id],
+    queryKey: ["students-of-selected", selectedClass?.classId],
     enabled: !!selectedClass,
     queryFn: () =>
       getStudents({
         page: 0,
         pageSize: 200,
         search: "",
-        classId: selectedClass.class_id,
+        classId: selectedClass.classId,
         status: "ALL",
       }),
   });
@@ -136,7 +136,7 @@ export default function TeacherClassesPage() {
               {studentsQuery.data?.data?.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell>{s.id}</TableCell>
-                  <TableCell>{s.full_name}</TableCell>
+                  <TableCell>{s.fullname}</TableCell>
                   <TableCell>{s.guardian_name}</TableCell>
                   <TableCell>{s.guardian_phone}</TableCell>
                 </TableRow>

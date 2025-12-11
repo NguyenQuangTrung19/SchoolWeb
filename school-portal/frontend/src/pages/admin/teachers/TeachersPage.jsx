@@ -53,13 +53,14 @@ export default function AdminTeachersPage() {
   const [editingTeacher, setEditingTeacher] = useState(null);
   const [formValues, setFormValues] = useState({
     id: "",
-    full_name: "",
+    fullname: "",
+    email: "",
     dob: "",
     gender: "",
     address: "",
     phone: "",
-    citizen_id: "",
-    main_subject: "",
+    citizenid: "",
+    mainsubject: "",
     status: "ACTIVE",
     note: "",
   });
@@ -117,13 +118,14 @@ export default function AdminTeachersPage() {
     setEditingTeacher(null);
     setFormValues({
       id: "",
-      full_name: "",
+      fullname: "",
+      email: "",
       dob: "",
       gender: "",
       address: "",
       phone: "",
-      citizen_id: "",
-      main_subject: "",
+      citizenid: "",
+      mainsubject: "",
       status: "ACTIVE",
       note: "",
     });
@@ -134,13 +136,14 @@ export default function AdminTeachersPage() {
     setEditingTeacher(teacher);
     setFormValues({
       id: teacher.id,
-      full_name: teacher.full_name,
+      fullname: teacher.fullname,
+      email: teacher.email,
       dob: teacher.dob || "",
       gender: teacher.gender || "",
       address: teacher.address || "",
       phone: teacher.phone || "",
-      citizen_id: teacher.citizen_id || "",
-      main_subject: teacher.main_subject || "",
+      citizenid: teacher.citizenid || "",
+      mainsubject: teacher.mainsubject || "",
       status: teacher.status || "ACTIVE",
       note: teacher.note || "",
     });
@@ -157,14 +160,30 @@ export default function AdminTeachersPage() {
   };
 
   const handleSubmitForm = () => {
-    if (!formValues.full_name) {
+    if (!formValues.id) {
+      alert("Vui lòng nhập Mã giáo viên (ví dụ: GV001)");
+      return;
+    }
+    if (!formValues.fullname) {
       alert("Vui lòng nhập họ tên giáo viên");
       return;
     }
 
     const payload = {
       ...formValues,
+      id: formValues.id?.trim() || undefined,
+      fullname: formValues.fullname.trim(),
+      email: formValues.email.trim() || undefined,
+      dob: formValues.dob || undefined,
+      gender: formValues.gender || undefined,
+      address: formValues.address || undefined,
+      phone: formValues.phone || undefined,
+      citizenid: formValues.citizenid || undefined,
+      mainsubject: formValues.mainsubject || undefined,
+      status: formValues.status || undefined,
+      note: formValues.note || undefined,
     };
+    console.log("Dữ liệu gửi đi:", payload);
 
     if (editingTeacher) {
       // Không cho đổi mã GV (id) khi edit, trừ khi bạn muốn cho phép
@@ -176,9 +195,7 @@ export default function AdminTeachersPage() {
   };
 
   const handleDeleteTeacher = (teacher) => {
-    if (
-      window.confirm(`Bạn có chắc muốn xóa giáo viên ${teacher.full_name}?`)
-    ) {
+    if (window.confirm(`Bạn có chắc muốn xóa giáo viên ${teacher.fullname}?`)) {
       deleteMutation.mutate(teacher.id);
     }
   };
@@ -207,7 +224,7 @@ export default function AdminTeachersPage() {
         />
 
         <TextField
-          label="Lọc theo môn (main_subject)"
+          label="Lọc theo môn (mainsubject)"
           size="small"
           value={subjectFilter === "ALL" ? "" : subjectFilter}
           onChange={(e) => {
@@ -266,10 +283,10 @@ export default function AdminTeachersPage() {
               {rows.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell>{t.id}</TableCell>
-                  <TableCell>{t.full_name}</TableCell>
-                  <TableCell>{t.main_subject}</TableCell>
+                  <TableCell>{t.fullname}</TableCell>
+                  <TableCell>{t.mainsubject}</TableCell>
                   <TableCell>{t.phone}</TableCell>
-                  <TableCell>{t.citizen_id}</TableCell>
+                  <TableCell>{t.citizenid}</TableCell>
                   <TableCell>
                     {t.gender === "M" ? "Nam" : t.gender === "F" ? "Nữ" : ""}
                   </TableCell>
@@ -350,10 +367,16 @@ export default function AdminTeachersPage() {
               <Grid item xs={12} sm={editingTeacher ? 6 : 8}>
                 <TextField
                   label="Họ tên giáo viên"
-                  value={formValues.full_name}
-                  onChange={(e) =>
-                    handleFormChange("full_name", e.target.value)
-                  }
+                  value={formValues.fullname}
+                  onChange={(e) => handleFormChange("fullname", e.target.value)}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Email"
+                  value={formValues.email}
+                  onChange={(e) => handleFormChange("email", e.target.value)}
                   fullWidth
                 />
               </Grid>
@@ -380,7 +403,7 @@ export default function AdminTeachersPage() {
                     <MenuItem value="">Chưa chọn</MenuItem>
                     <MenuItem value="M">Nam</MenuItem>
                     <MenuItem value="F">Nữ</MenuItem>
-                    <MenuItem value="OTHER">Khác</MenuItem>
+                    <MenuItem value="O">Khác</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -397,9 +420,9 @@ export default function AdminTeachersPage() {
               <Grid item xs={12} sm={4}>
                 <TextField
                   label="CCCD"
-                  value={formValues.citizen_id}
+                  value={formValues.citizenid}
                   onChange={(e) =>
-                    handleFormChange("citizen_id", e.target.value)
+                    handleFormChange("citizenid", e.target.value)
                   }
                   fullWidth
                 />
@@ -416,10 +439,10 @@ export default function AdminTeachersPage() {
 
               <Grid item xs={12} sm={6}>
                 <TextField
-                  label="Môn chính (main_subject)"
-                  value={formValues.main_subject}
+                  label="Môn chính (mainsubject)"
+                  value={formValues.mainsubject}
                   onChange={(e) =>
-                    handleFormChange("main_subject", e.target.value)
+                    handleFormChange("mainsubject", e.target.value)
                   }
                   fullWidth
                   placeholder="VD: Toán, Ngữ văn, Tiếng Anh..."

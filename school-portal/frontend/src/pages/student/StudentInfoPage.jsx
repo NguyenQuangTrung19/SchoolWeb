@@ -36,7 +36,7 @@ export default function StudentInfoPage() {
           <CardContent>
             <Grid container spacing={2}>
               <Grid item xs={12}>
-                <Typography variant="h6">{student.full_name}</Typography>
+                <Typography variant="h6">{student.fullname}</Typography>
                 <Chip
                   label={student.status}
                   color={student.status === "ACTIVE" ? "success" : "default"}

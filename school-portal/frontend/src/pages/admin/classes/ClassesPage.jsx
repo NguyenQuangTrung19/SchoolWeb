@@ -186,7 +186,7 @@ export default function AdminClassesPage() {
       girls_count: formValues.girls_count
         ? parseInt(formValues.girls_count, 10)
         : 0,
-      homeroom_teacher_name: teacher ? teacher.full_name : "",
+      homeroom_teacher_name: teacher ? teacher.fullname : "",
     };
 
     if (editingClass) {
@@ -395,7 +395,7 @@ export default function AdminClassesPage() {
                     </MenuItem>
                     {teachers.map((t) => (
                       <MenuItem key={t.id} value={t.id}>
-                        {t.id} - {t.full_name} ({t.main_subject})
+                        {t.id} - {t.fullname} ({t.mainsubject})
                       </MenuItem>
                     ))}
                   </Select>

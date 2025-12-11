@@ -31,15 +31,15 @@ export class TeachersService {
 
     if (search) {
       qb.andWhere(
-        '(t.id LIKE :search OR t.fullname LIKE :search OR t.phone LIKE :search OR t.citizen_id LIKE :search OR t.main_subject LIKE :search)',
+        '(t.id LIKE :search OR t.fullname LIKE :search OR t.phone LIKE :search OR t.citizenid LIKE :search OR t.mainsubject LIKE :search)',
         { search: `%${search}%` },
       );
     }
 
     if (subject !== 'ALL') {
-      qb.andWhere('t.main_subject = :subject', { subject });
+      qb.andWhere('t.mainsubject = :subject', { subject });
       // nếu muốn ignore case:
-      // qb.andWhere("LOWER(t.main_subject) = LOWER(:subject)", { subject });
+      // qb.andWhere("LOWER(t.mainsubject) = LOWER(:subject)", { subject });
     }
 
     if (status !== 'ALL') {
@@ -100,7 +100,7 @@ export class TeachersService {
 
     // 2. Cập nhật thông tin TEACHER tại bảng teachers
     if (dto.fullname !== undefined) teacher.fullname = dto.fullname;
-    if (dto.dob !== undefined) teacher.dob = dto.dob ?? null;
+    if (dto.dob !== undefined) teacher.dob = dto.dob ? new Date(dto.dob) : null;
     if (dto.gender !== undefined) teacher.gender = dto.gender;
     if (dto.address !== undefined) teacher.address = dto.address ?? null;
     if (dto.phone !== undefined) teacher.phone = dto.phone ?? null;

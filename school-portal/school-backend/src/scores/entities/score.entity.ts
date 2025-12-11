@@ -21,7 +21,7 @@ export class Score {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'student_id', type: 'varchar', length: 20 })
+  @Column({ name: 'studentId', type: 'varchar', length: 20 })
   studentId: string; // FK -> students.id (HS001)
 
   @Column({ name: 'class_subject_id', type: 'int' })

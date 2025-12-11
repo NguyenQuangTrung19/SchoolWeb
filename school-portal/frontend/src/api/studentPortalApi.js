@@ -7,8 +7,7 @@ export async function getStudentScores(studentId, classId) {
   // Lấy từ mockScores trong scoresApi.js
   const scores =
     window.mockScores?.filter(
-      (s) =>
-        s.student_id === studentId && s.class_subject_id === Number(classId)
+      (s) => s.studentId === studentId && s.class_subject_id === Number(classId)
     ) || [];
 
   // group by type
@@ -32,7 +31,7 @@ export async function getStudentAttendance(studentId, from, to) {
   const all = window.mockAttendance || [];
 
   return all.filter(
-    (a) => a.student_id === studentId && a.date >= from && a.date <= to
+    (a) => a.studentId === studentId && a.date >= from && a.date <= to
   );
 }
 

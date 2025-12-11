@@ -48,7 +48,7 @@ export default function AdminUsersPage() {
   const [editingUser, setEditingUser] = useState(null);
   const [formValues, setFormValues] = useState({
     username: "",
-    full_name: "",
+    fullname: "",
     email: "",
     phone: "",
     role: "STUDENT",
@@ -97,7 +97,7 @@ export default function AdminUsersPage() {
     setEditingUser(null);
     setFormValues({
       username: "",
-      full_name: "",
+      fullname: "",
       email: "",
       phone: "",
       role: "STUDENT",
@@ -109,7 +109,7 @@ export default function AdminUsersPage() {
     setEditingUser(user);
     setFormValues({
       username: user.username,
-      full_name: user.full_name,
+      fullname: user.fullname,
       email: user.email,
       phone: user.phone,
       role: user.role,
@@ -127,7 +127,7 @@ export default function AdminUsersPage() {
   };
 
   const handleSubmitForm = () => {
-    if (!formValues.username || !formValues.full_name) {
+    if (!formValues.username || !formValues.fullname) {
       alert("Vui lòng nhập username và họ tên");
       return;
     }
@@ -213,7 +213,7 @@ export default function AdminUsersPage() {
                 <TableRow key={u.id}>
                   <TableCell>{u.id}</TableCell>
                   <TableCell>{u.username}</TableCell>
-                  <TableCell>{u.full_name}</TableCell>
+                  <TableCell>{u.fullname}</TableCell>
                   <TableCell>{u.email}</TableCell>
                   <TableCell>{u.phone}</TableCell>
                   <TableCell>
@@ -296,8 +296,8 @@ export default function AdminUsersPage() {
             />
             <TextField
               label="Họ tên"
-              value={formValues.full_name}
-              onChange={(e) => handleFormChange("full_name", e.target.value)}
+              value={formValues.fullname}
+              onChange={(e) => handleFormChange("fullname", e.target.value)}
               fullWidth
             />
             <TextField

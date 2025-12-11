@@ -48,11 +48,11 @@ export class ScoresService {
   // logic: nếu đã có (studentId,classSubjectId,type) -> update
   //        nếu chưa có -> create
   async upsert(dto: UpsertScoreDto): Promise<Score> {
-    const { student_id, class_subject_id, type, score, date } = dto;
+    const { studentId, class_subject_id, type, score, date } = dto;
 
     const existing = await this.scoresRepo.findOne({
       where: {
-        studentId: student_id,
+        studentId: studentId,
         classSubjectId: class_subject_id,
         type: type as ScoreType,
       },
@@ -70,7 +70,7 @@ export class ScoresService {
     }
 
     const newScore = this.scoresRepo.create({
-      studentId: student_id,
+      studentId: studentId,
       classSubjectId: class_subject_id,
       type: type as ScoreType,
       score: numericScore,

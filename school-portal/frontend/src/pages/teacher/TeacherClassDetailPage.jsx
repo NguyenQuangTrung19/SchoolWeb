@@ -67,7 +67,7 @@ export default function TeacherClassDetailPage() {
         page: 0,
         pageSize: 200,
         search: "",
-        classId: classSubjectQuery.data.class_id,
+        classId: classSubjectQuery.data.classId,
         status: "ALL",
       }),
   });
@@ -84,7 +84,7 @@ export default function TeacherClassDetailPage() {
     queryKey: ["attendance", { classSubjectId: id, date }],
     enabled: !!classSubjectQuery.data,
     queryFn: () =>
-      getAttendanceByClassAndDate(classSubjectQuery.data.class_id, date),
+      getAttendanceByClassAndDate(classSubjectQuery.data.classId, date),
   });
 
   // 5) Tài liệu
@@ -131,7 +131,7 @@ export default function TeacherClassDetailPage() {
   const scoresMap = useMemo(() => {
     const map = {};
     scores.forEach((s) => {
-      map[`${s.student_id}_${s.type}`] = s.score;
+      map[`${s.studentId}_${s.type}`] = s.score;
     });
     return map;
   }, [scores]);
@@ -141,7 +141,7 @@ export default function TeacherClassDetailPage() {
     if (!attendanceQuery.data) return;
     const map = {};
     attendanceQuery.data.forEach((a) => {
-      map[a.student_id] = a.status;
+      map[a.studentId] = a.status;
     });
     setAttendanceMap(map);
   }, [attendanceQuery.data]);
@@ -170,9 +170,9 @@ export default function TeacherClassDetailPage() {
 
   // ======= HANDLERS =======
 
-  const handleChangeScore = (student_id, type, value) => {
+  const handleChangeScore = (studentId, type, value) => {
     upsertScoreMutation.mutate({
-      student_id,
+      studentId,
       class_subject_id: Number(id),
       type,
       score: value,
@@ -180,21 +180,21 @@ export default function TeacherClassDetailPage() {
     });
   };
 
-  const handleChangeAttendance = (student_id, status) => {
+  const handleChangeAttendance = (studentId, status) => {
     setAttendanceMap((prev) => ({
       ...prev,
-      [student_id]: status,
+      [studentId]: status,
     }));
   };
 
   const handleSaveAttendance = () => {
     const items = students.map((s) => ({
-      student_id: s.id,
+      studentId: s.id,
       status: attendanceMap[s.id] || "PRESENT",
     }));
 
     saveAttendanceMutation.mutate({
-      class_id: cs.class_id,
+      classId: cs.classId,
       date,
       items,
     });
@@ -260,7 +260,7 @@ export default function TeacherClassDetailPage() {
                 {students.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell>{s.id}</TableCell>
-                    <TableCell>{s.full_name}</TableCell>
+                    <TableCell>{s.fullname}</TableCell>
                     <TableCell>{s.guardian_name}</TableCell>
                     <TableCell>{s.guardian_phone}</TableCell>
                     <TableCell>
@@ -314,7 +314,7 @@ export default function TeacherClassDetailPage() {
                     return (
                       <TableRow key={s.id}>
                         <TableCell>{s.id}</TableCell>
-                        <TableCell>{s.full_name}</TableCell>
+                        <TableCell>{s.fullname}</TableCell>
                         <TableCell>
                           <TextField
                             size="small"
@@ -417,7 +417,7 @@ export default function TeacherClassDetailPage() {
                     return (
                       <TableRow key={s.id}>
                         <TableCell>{s.id}</TableCell>
-                        <TableCell>{s.full_name}</TableCell>
+                        <TableCell>{s.fullname}</TableCell>
                         <TableCell>
                           <TextField
                             select
@@ -529,7 +529,7 @@ export default function TeacherClassDetailPage() {
                         "-"
                       )}
                     </TableCell>
-                    <TableCell>{m.created_at}</TableCell>
+                    <TableCell>{m.createdAt}</TableCell>
                     <TableCell align="right">
                       <Button
                         size="small"

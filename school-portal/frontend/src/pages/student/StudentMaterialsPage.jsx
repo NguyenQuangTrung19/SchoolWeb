@@ -61,7 +61,7 @@ export default function StudentMaterialsPage() {
                   Tải xuống
                 </Link>
               </TableCell>
-              <TableCell>{m.created_at}</TableCell>
+              <TableCell>{m.createdAt}</TableCell>
             </TableRow>
           ))}
 

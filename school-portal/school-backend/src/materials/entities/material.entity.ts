@@ -24,9 +24,9 @@ export class Material {
   @Column({ type: 'varchar', length: 500, nullable: true })
   url: string | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'createdAt', type: 'timestamp' })
   createdAt: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @UpdateDateColumn({ name: 'updatedAt', type: 'timestamp' })
   updatedAt: Date;
 }

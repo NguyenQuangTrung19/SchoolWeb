@@ -18,13 +18,13 @@ export class ClassSubject {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'class_id', type: 'int' })
+  @Column({ name: 'classId', type: 'int' })
   classId: number;
 
-  @Column({ name: 'subject_id', type: 'int' })
+  @Column({ name: 'subjectId', type: 'int' })
   subjectId: number;
 
-  @Column({ name: 'teacher_id', type: 'varchar', length: 20 })
+  @Column({ name: 'teacherId', type: 'varchar', length: 20 })
   teacherId: string;
 
   @Column({ name: 'weekly_lessons', type: 'int', nullable: true })

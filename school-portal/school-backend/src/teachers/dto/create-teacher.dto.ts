@@ -6,7 +6,9 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  IsDate,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateTeacherDto {
   @IsString()
@@ -35,7 +37,7 @@ export class CreateTeacherDto {
 
   @IsOptional()
   @IsString()
-  dob?: Date; // "YYYY-MM-DD"
+  dob?: string;
 
   @IsOptional()
   @IsIn(['M', 'F', 'O'])
@@ -60,5 +62,5 @@ export class CreateTeacherDto {
   @IsOptional()
   @IsString()
   note?: string;
-  user_name: string;
+  // user_name: string;
 }

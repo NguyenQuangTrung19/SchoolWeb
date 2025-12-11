@@ -53,9 +53,9 @@ export default function AdminAssignTeachingPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingAssign, setEditingAssign] = useState(null);
   const [formValues, setFormValues] = useState({
-    class_id: "",
-    subject_id: "",
-    teacher_id: "",
+    classId: "",
+    subjectId: "",
+    teacherId: "",
     weekly_lessons: "",
     room: "",
     status: "ACTIVE",
@@ -147,9 +147,9 @@ export default function AdminAssignTeachingPage() {
   const handleOpenCreate = () => {
     setEditingAssign(null);
     setFormValues({
-      class_id: "",
-      subject_id: "",
-      teacher_id: "",
+      classId: "",
+      subjectId: "",
+      teacherId: "",
       weekly_lessons: "",
       room: "",
       status: "ACTIVE",
@@ -160,9 +160,9 @@ export default function AdminAssignTeachingPage() {
   const handleOpenEdit = (assign) => {
     setEditingAssign(assign);
     setFormValues({
-      class_id: assign.class_id,
-      subject_id: assign.subject_id,
-      teacher_id: assign.teacher_id,
+      classId: assign.classId,
+      subjectId: assign.subjectId,
+      teacherId: assign.teacherId,
       weekly_lessons: assign.weekly_lessons || "",
       room: assign.room || "",
       status: assign.status || "ACTIVE",
@@ -180,11 +180,7 @@ export default function AdminAssignTeachingPage() {
   };
 
   const handleSubmitForm = () => {
-    if (
-      !formValues.class_id ||
-      !formValues.subject_id ||
-      !formValues.teacher_id
-    ) {
+    if (!formValues.classId || !formValues.subjectId || !formValues.teacherId) {
       alert("Vui lòng chọn Lớp, Môn và Giáo viên");
       return;
     }
@@ -194,22 +190,22 @@ export default function AdminAssignTeachingPage() {
     const teachers = teachersQuery.data || [];
 
     const clazz = classes.find(
-      (c) => String(c.id) === String(formValues.class_id)
+      (c) => String(c.id) === String(formValues.classId)
     );
     const subject = subjects.find(
-      (s) => String(s.id) === String(formValues.subject_id)
+      (s) => String(s.id) === String(formValues.subjectId)
     );
     const teacher = teachers.find(
-      (t) => String(t.id) === String(formValues.teacher_id)
+      (t) => String(t.id) === String(formValues.teacherId)
     );
 
     const payload = {
-      class_id: clazz ? clazz.id : null,
+      classId: clazz ? clazz.id : null,
       class_name: clazz ? clazz.name : "",
-      subject_id: subject ? subject.id : null,
+      subjectId: subject ? subject.id : null,
       subject_name: subject ? subject.name : "",
-      teacher_id: teacher ? teacher.id : "",
-      teacher_name: teacher ? teacher.full_name : "",
+      teacherId: teacher ? teacher.id : "",
+      teacher_name: teacher ? teacher.fullname : "",
       weekly_lessons: formValues.weekly_lessons
         ? parseInt(formValues.weekly_lessons, 10)
         : null,
@@ -302,7 +298,7 @@ export default function AdminAssignTeachingPage() {
             <MenuItem value="ALL">Tất cả</MenuItem>
             {teachers.map((t) => (
               <MenuItem key={t.id} value={t.id}>
-                {t.id} - {t.full_name}
+                {t.id} - {t.fullname}
               </MenuItem>
             ))}
           </Select>
@@ -403,9 +399,9 @@ export default function AdminAssignTeachingPage() {
                   <InputLabel>Lớp</InputLabel>
                   <Select
                     label="Lớp"
-                    value={formValues.class_id}
+                    value={formValues.classId}
                     onChange={(e) =>
-                      handleFormChange("class_id", e.target.value)
+                      handleFormChange("classId", e.target.value)
                     }
                   >
                     {classes.map((c) => (
@@ -422,9 +418,9 @@ export default function AdminAssignTeachingPage() {
                   <InputLabel>Môn</InputLabel>
                   <Select
                     label="Môn"
-                    value={formValues.subject_id}
+                    value={formValues.subjectId}
                     onChange={(e) =>
-                      handleFormChange("subject_id", e.target.value)
+                      handleFormChange("subjectId", e.target.value)
                     }
                   >
                     {subjects.map((s) => (
@@ -441,14 +437,14 @@ export default function AdminAssignTeachingPage() {
                   <InputLabel>Giáo viên</InputLabel>
                   <Select
                     label="Giáo viên"
-                    value={formValues.teacher_id}
+                    value={formValues.teacherId}
                     onChange={(e) =>
-                      handleFormChange("teacher_id", e.target.value)
+                      handleFormChange("teacherId", e.target.value)
                     }
                   >
                     {teachers.map((t) => (
                       <MenuItem key={t.id} value={t.id}>
-                        {t.id} - {t.full_name} ({t.main_subject})
+                        {t.id} - {t.fullname} ({t.mainsubject})
                       </MenuItem>
                     ))}
                   </Select>

@@ -162,14 +162,14 @@ export default function AdminDashboardPage() {
   const topTeachers = useMemo(() => {
     const countMap = {};
     classSubjects.forEach((cs) => {
-      if (!cs.teacher_id) return;
-      countMap[cs.teacher_id] = (countMap[cs.teacher_id] || 0) + 1;
+      if (!cs.teacherId) return;
+      countMap[cs.teacherId] = (countMap[cs.teacherId] || 0) + 1;
     });
 
     const entries = Object.entries(countMap).map(([teacherId, count]) => ({
       teacherId,
       count,
-      teacherName: teacherMap[teacherId]?.full_name || teacherId,
+      teacherName: teacherMap[teacherId]?.fullname || teacherId,
     }));
 
     entries.sort((a, b) => b.count - a.count);

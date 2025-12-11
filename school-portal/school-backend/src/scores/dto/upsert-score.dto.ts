@@ -13,7 +13,7 @@ import { Type } from 'class-transformer';
 
 export class UpsertScoreDto {
   @IsString()
-  student_id: string; // "HS001"
+  studentId: string; // "HS001"
 
   @IsInt()
   @Type(() => Number)

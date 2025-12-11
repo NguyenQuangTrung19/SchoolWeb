@@ -21,10 +21,10 @@ export class Attendance {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ name: 'student_id', type: 'varchar', length: 20 })
+  @Column({ name: 'studentId', type: 'varchar', length: 20 })
   studentId: string; // FK -> students.id
 
-  @Column({ name: 'class_id', type: 'int' })
+  @Column({ name: 'classId', type: 'int' })
   classId: number; // FK -> classes.id
 
   @Column({ type: 'date' })

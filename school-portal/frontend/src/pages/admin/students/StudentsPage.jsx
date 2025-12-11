@@ -51,7 +51,7 @@ export default function AdminStudentsPage() {
   const [editingStudent, setEditingStudent] = useState(null);
   const [formValues, setFormValues] = useState({
     id: "",
-    full_name: "",
+    fullname: "",
     dob: "",
     gender: "",
     address: "",
@@ -59,7 +59,7 @@ export default function AdminStudentsPage() {
     guardian_name: "",
     guardian_phone: "",
     guardian_job: "",
-    guardian_citizen_id: "",
+    guardian_citizenId: "",
     status: "ACTIVE",
     note: "",
   });
@@ -137,7 +137,7 @@ export default function AdminStudentsPage() {
     setEditingStudent(null);
     setFormValues({
       id: "",
-      full_name: "",
+      fullname: "",
       dob: "",
       gender: "",
       address: "",
@@ -145,7 +145,7 @@ export default function AdminStudentsPage() {
       guardian_name: "",
       guardian_phone: "",
       guardian_job: "",
-      guardian_citizen_id: "",
+      guardian_citizenId: "",
       status: "ACTIVE",
       note: "",
     });
@@ -156,7 +156,7 @@ export default function AdminStudentsPage() {
     setEditingStudent(student);
     setFormValues({
       id: student.id,
-      full_name: student.full_name,
+      fullname: student.fullname,
       dob: student.dob || "",
       gender: student.gender || "",
       address: student.address || "",
@@ -164,7 +164,7 @@ export default function AdminStudentsPage() {
       guardian_name: student.guardian_name || "",
       guardian_phone: student.guardian_phone || "",
       guardian_job: student.guardian_job || "",
-      guardian_citizen_id: student.guardian_citizen_id || "",
+      guardian_citizenId: student.guardian_citizenId || "",
       status: student.status || "ACTIVE",
       note: student.note || "",
     });
@@ -181,7 +181,7 @@ export default function AdminStudentsPage() {
   };
 
   const handleSubmitForm = () => {
-    if (!formValues.full_name) {
+    if (!formValues.fullname) {
       alert("Vui lòng nhập họ tên học sinh");
       return;
     }
@@ -207,7 +207,7 @@ export default function AdminStudentsPage() {
   const handleDeleteStudent = (student) => {
     if (
       window.confirm(
-        `Bạn có chắc muốn xóa học sinh ${student.full_name} (${student.id})?`
+        `Bạn có chắc muốn xóa học sinh ${student.fullname} (${student.id})?`
       )
     ) {
       deleteMutation.mutate(student.id);
@@ -304,7 +304,7 @@ export default function AdminStudentsPage() {
                 return (
                   <TableRow key={s.id}>
                     <TableCell>{s.id}</TableCell>
-                    <TableCell>{s.full_name}</TableCell>
+                    <TableCell>{s.fullname}</TableCell>
                     <TableCell>{clazz ? clazz.name : "-"}</TableCell>
                     <TableCell>{s.guardian_name}</TableCell>
                     <TableCell>{s.guardian_phone}</TableCell>
@@ -382,10 +382,8 @@ export default function AdminStudentsPage() {
               <Grid item xs={12} sm={editingStudent ? 6 : 8}>
                 <TextField
                   label="Họ tên học sinh"
-                  value={formValues.full_name}
-                  onChange={(e) =>
-                    handleFormChange("full_name", e.target.value)
-                  }
+                  value={formValues.fullname}
+                  onChange={(e) => handleFormChange("fullname", e.target.value)}
                   fullWidth
                 />
               </Grid>
@@ -481,9 +479,9 @@ export default function AdminStudentsPage() {
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="CCCD người giám hộ"
-                  value={formValues.guardian_citizen_id}
+                  value={formValues.guardian_citizenId}
                   onChange={(e) =>
-                    handleFormChange("guardian_citizen_id", e.target.value)
+                    handleFormChange("guardian_citizenId", e.target.value)
                   }
                   fullWidth
                 />

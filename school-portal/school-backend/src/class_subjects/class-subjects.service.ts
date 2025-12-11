@@ -19,9 +19,9 @@ export class ClassSubjectsService {
   private baseQuery(): SelectQueryBuilder<ClassSubject> {
     return this.csRepo
       .createQueryBuilder('cs')
-      .leftJoinAndSelect('classes', 'c', 'c.id = cs.class_id')
-      .leftJoinAndSelect('subjects', 's', 's.id = cs.subject_id')
-      .leftJoinAndSelect('teachers', 't', 't.id = cs.teacher_id');
+      .leftJoinAndSelect('classes', 'c', 'c.id = cs.classId')
+      .leftJoinAndSelect('subjects', 's', 's.id = cs.subjectId')
+      .leftJoinAndSelect('teachers', 't', 't.id = cs.teacherId');
   }
 
   // GET /class-subjects
@@ -31,13 +31,13 @@ export class ClassSubjectsService {
     let qb = this.baseQuery();
 
     if (classId) {
-      qb = qb.andWhere('cs.class_id = :classId', { classId });
+      qb = qb.andWhere('cs.classId = :classId', { classId });
     }
     if (subjectId) {
-      qb = qb.andWhere('cs.subject_id = :subjectId', { subjectId });
+      qb = qb.andWhere('cs.subjectId = :subjectId', { subjectId });
     }
     if (teacherId && teacherId !== 'ALL') {
-      qb = qb.andWhere('cs.teacher_id = :teacherId', { teacherId });
+      qb = qb.andWhere('cs.teacherId = :teacherId', { teacherId });
     }
 
     const [rows, total] = await qb
@@ -49,12 +49,12 @@ export class ClassSubjectsService {
     // map sang format FE đang dùng
     const data = rows.map((cs: any) => ({
       id: cs.id,
-      class_id: cs.classId,
+      classId: cs.classId,
       class_name: (cs as any).c?.name ?? undefined,
-      subject_id: cs.subjectId,
+      subjectId: cs.subjectId,
       subject_name: (cs as any).s?.name ?? undefined,
-      teacher_id: cs.teacherId,
-      teacher_name: (cs as any).t?.full_name ?? undefined,
+      teacheIid: cs.teacherId,
+      teacher_name: (cs as any).t?.fullname ?? undefined,
       weekly_lessons: cs.weeklyLessons,
       room: cs.room,
       status: cs.status,
@@ -75,12 +75,12 @@ export class ClassSubjectsService {
     const raw = await this.baseQuery()
       .select([
         'cs.id as id',
-        'cs.class_id as class_id',
+        'cs.classId as classId',
         'c.name as class_name',
-        'cs.subject_id as subject_id',
+        'cs.subjectId as subjectId',
         's.name as subject_name',
-        'cs.teacher_id as teacher_id',
-        't.full_name as teacher_name',
+        'cs.teacherId as teacherId',
+        't.fullname as teacher_name',
         'cs.weekly_lessons as weekly_lessons',
         'cs.room as room',
         'cs.status as status',
