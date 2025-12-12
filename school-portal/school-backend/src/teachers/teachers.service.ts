@@ -27,7 +27,23 @@ export class TeachersService {
       status = 'ALL',
     } = query;
 
-    const qb = this.repo.createQueryBuilder('t');
+    const qb = this.repo
+      .createQueryBuilder('t')
+      .leftJoin('users', 'u', 'u.id = t.userid')
+      .select([
+        't.id AS id',
+        't.userid AS userid',
+        't.fullname AS fullname',
+        't.dob AS dob',
+        't.gender AS gender',
+        't.address AS address',
+        't.phone AS phone',
+        't.citizenid AS citizenid',
+        't.mainsubject AS mainsubject',
+        't.status AS status',
+        't.note AS note',
+        'u.email AS email',
+      ]);
 
     if (search) {
       qb.andWhere(
@@ -38,19 +54,33 @@ export class TeachersService {
 
     if (subject !== 'ALL') {
       qb.andWhere('t.mainsubject = :subject', { subject });
-      // nếu muốn ignore case:
-      // qb.andWhere("LOWER(t.mainsubject) = LOWER(:subject)", { subject });
     }
 
     if (status !== 'ALL') {
       qb.andWhere('t.status = :status', { status });
     }
 
+    const total = await qb.getCount();
+
     qb.orderBy('t.id', 'ASC')
       .skip(page * pageSize)
       .take(pageSize);
 
-    const [data, total] = await qb.getManyAndCount();
+    const rows = await qb.getRawMany();
+    const data = rows.map((r: any) => ({
+      id: r.id,
+      userid: r.userid,
+      fullname: r.fullname,
+      dob: r.dob,
+      gender: r.gender,
+      address: r.address,
+      phone: r.phone,
+      citizenid: r.citizenid,
+      mainsubject: r.mainsubject,
+      status: r.status,
+      note: r.note,
+      email: r.email,
+    }));
     return { data, total };
   }
 
@@ -59,11 +89,15 @@ export class TeachersService {
   }
 
   async create(dto: CreateTeacherDto) {
-    // 1. Tạo user trước
+    const teacherId =
+      dto.id && dto.id.trim().length > 0
+        ? dto.id.trim().toUpperCase()
+        : await this.generateTeacherId();
+
     const username =
       dto.username && dto.username.trim().length > 0
         ? dto.username.trim()
-        : dto.id.toLowerCase(); // ví dụ "GV010" -> "gv010"
+        : teacherId.toLowerCase();
 
     const user = await this.usersService.create({
       username,
@@ -72,9 +106,8 @@ export class TeachersService {
       phone: dto.phone,
       role: UserRole.TEACHER,
     });
-    // 2. Tạo teacher gắn user_id
     const teacher = this.repo.create({
-      id: dto.id,
+      id: teacherId,
       userid: user.id,
       fullname: dto.fullname,
       dob: dto.dob ?? null,
@@ -84,6 +117,7 @@ export class TeachersService {
       citizenid: dto.citizenid ?? null,
       mainsubject: dto.mainsubject ?? null,
       status: 'ACTIVE',
+      note: dto.note ?? null,
     });
 
     const saved = await this.repo.save(teacher);
@@ -125,8 +159,6 @@ export class TeachersService {
         userUpdate.phone = dto.phone;
       }
 
-      // (Không đụng tới username / role ở đây cho an toàn)
-      // Gọi UsersService.update để cập nhật bản ghi user tương ứng
       await this.usersService.update(teacher.userid, userUpdate);
     }
 
@@ -138,5 +170,17 @@ export class TeachersService {
   async remove(id: string) {
     await this.repo.delete(id);
     return { success: true };
+  }
+
+  private async generateTeacherId(): Promise<string> {
+    const last = await this.repo
+      .createQueryBuilder('t')
+      .orderBy('t.id', 'DESC')
+      .getOne();
+
+    if (!last) return 'GV001';
+
+    const num = parseInt(last.id.replace(/\D/g, ''), 10) + 1;
+    return 'GV' + num.toString().padStart(3, '0');
   }
 }

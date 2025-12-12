@@ -160,10 +160,6 @@ export default function AdminTeachersPage() {
   };
 
   const handleSubmitForm = () => {
-    if (!formValues.id) {
-      alert("Vui lòng nhập Mã giáo viên (ví dụ: GV001)");
-      return;
-    }
     if (!formValues.fullname) {
       alert("Vui lòng nhập họ tên giáo viên");
       return;

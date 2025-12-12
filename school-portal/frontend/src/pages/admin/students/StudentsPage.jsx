@@ -59,7 +59,7 @@ export default function AdminStudentsPage() {
     guardian_name: "",
     guardian_phone: "",
     guardian_job: "",
-    guardian_citizenId: "",
+    guardian_citizenid: "",
     status: "ACTIVE",
     note: "",
   });
@@ -145,7 +145,7 @@ export default function AdminStudentsPage() {
       guardian_name: "",
       guardian_phone: "",
       guardian_job: "",
-      guardian_citizenId: "",
+      guardian_citizenid: "",
       status: "ACTIVE",
       note: "",
     });
@@ -164,11 +164,12 @@ export default function AdminStudentsPage() {
       guardian_name: student.guardian_name || "",
       guardian_phone: student.guardian_phone || "",
       guardian_job: student.guardian_job || "",
-      guardian_citizenId: student.guardian_citizenId || "",
+      guardian_citizenid: student.guardian_citizenid || "",
       status: student.status || "ACTIVE",
       note: student.note || "",
     });
     setOpenDialog(true);
+    console.log("student khi edit =", student);
   };
 
   const handleCloseDialog = () => {
@@ -479,9 +480,9 @@ export default function AdminStudentsPage() {
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="CCCD người giám hộ"
-                  value={formValues.guardian_citizenId}
+                  value={formValues.guardian_citizenid}
                   onChange={(e) =>
-                    handleFormChange("guardian_citizenId", e.target.value)
+                    handleFormChange("guardian_citizenid", e.target.value)
                   }
                   fullWidth
                 />

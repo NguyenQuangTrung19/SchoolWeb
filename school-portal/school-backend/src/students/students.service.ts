@@ -66,11 +66,28 @@ export class StudentsService {
         ? dto.id.trim().toUpperCase()
         : await this.generateStudentId(); // viết ở dưới
 
+    // 2) Chuẩn hóa username/email/phone từ DTO (UsersPage sẽ gửi lên)
+    const username =
+      dto.username && dto.username.trim().length > 0
+        ? dto.username.trim()
+        : studentId.toLowerCase();
+
+    const email =
+      dto.email && dto.email.trim().length > 0 ? dto.email.trim() : undefined;
+
+    const phone =
+      dto.phone && dto.phone.trim().length > 0
+        ? dto.phone.trim()
+        : dto.guardian_phone && dto.guardian_phone.trim().length > 0
+          ? dto.guardian_phone.trim()
+          : undefined;
+
     // 2. Tạo User ứng với Student
     const createdUser = await this.usersService.create({
-      username: studentId.toLowerCase(),
+      username,
       fullname: dto.fullname,
-      phone: dto.guardian_phone,
+      email,
+      phone,
       role: UserRole.STUDENT,
     });
 
@@ -102,7 +119,7 @@ export class StudentsService {
 
     // 2. Update Student fields
     if (dto.fullname !== undefined) student.fullname = dto.fullname;
-    if (dto.dob !== undefined) student.dob = dto.dob ?? null;
+    if (dto.dob !== undefined) student.dob = dto.dob ? new Date(dto.dob) : null;
     if (dto.gender !== undefined) student.gender = dto.gender;
     if (dto.address !== undefined) student.address = dto.address ?? null;
     if (dto.current_class_id !== undefined)
@@ -123,6 +140,8 @@ export class StudentsService {
       const updateUser: UpdateUserDto = {};
 
       if (dto.fullname !== undefined) updateUser.fullname = dto.fullname;
+      if (dto.email !== undefined) updateUser.email = dto.email;
+      if (dto.phone !== undefined) updateUser.phone = dto.phone;
 
       if (dto.guardian_phone !== undefined)
         updateUser.phone = dto.guardian_phone;

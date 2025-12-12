@@ -11,9 +11,10 @@ import {
 import { Type } from 'class-transformer';
 
 export class CreateTeacherDto {
+  @IsOptional()
   @IsString()
   @MaxLength(20)
-  id: string;
+  id?: string;
 
   @IsOptional()
   @IsInt()

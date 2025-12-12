@@ -10,9 +10,10 @@ import {
 } from 'class-validator';
 
 export class CreateStudentDto {
+  @IsOptional()
   @IsString()
   @MaxLength(20)
-  id: string; // mã HS, ví dụ "HS001"
+  id?: string; // mã HS, ví dụ "HS001"
 
   @IsOptional()
   @IsInt()
@@ -36,7 +37,7 @@ export class CreateStudentDto {
 
   @IsOptional()
   @IsString()
-  dob?: Date; // "YYYY-MM-DD"
+  dob?: string; // "YYYY-MM-DD"
 
   @IsOptional()
   @IsIn(['M', 'F', 'O'])
