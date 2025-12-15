@@ -1,5 +1,5 @@
 // src/pages/admin/teachers/TeachersPage.jsx
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import {
   Box,
@@ -23,6 +23,15 @@ import {
   DialogContent,
   DialogActions,
   Grid,
+  Drawer,
+  Stack,
+  Divider,
+  Avatar,
+  Paper,
+  TableContainer,
+  Tooltip,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "../../../components/layout/AppLayout";
@@ -32,7 +41,9 @@ import {
   updateTeacher,
   deleteTeacher,
 } from "../../../api/teachersApi";
+import { getSubjects } from "../../../api/subjectsApi";
 
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
@@ -65,6 +76,85 @@ export default function AdminTeachersPage() {
     note: "",
   });
 
+  const [toast, setToast] = useState({
+    open: false,
+    message: "",
+    severity: "success", // success | info | warning | error
+  });
+
+  const showToast = (message, severity = "success") => {
+    setToast({ open: true, message, severity });
+  };
+
+  const closeToast = (event, reason) => {
+    if (reason === "clickaway") return;
+    setToast((prev) => ({ ...prev, open: false }));
+  };
+
+  const [openDrawer, setOpenDrawer] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
+
+  const toTitleCase = (s = "") =>
+    s
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
+  const normalizeDigits = (s = "") => s.replace(/\D/g, "");
+  const isValidPhoneVN = (s = "") => /^0\d{9}$/.test(s);
+  const isValidCitizenId = (s = "") => /^\d{12}$/.test(s);
+
+  const isAllowedEmail = (email) => {
+    if (!email) return true;
+    const e = email.trim().toLowerCase();
+    const basic = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+    if (!basic) return false;
+
+    return (
+      e.endsWith("@gmail.com") ||
+      e.endsWith(".edu") ||
+      e.endsWith(".edu.vn") ||
+      e.endsWith(".ac.vn")
+    );
+  };
+
+  const isAtLeast18 = (dobStr) => {
+    if (!dobStr) return true;
+    const dob = new Date(dobStr);
+    if (Number.isNaN(dob.getTime())) return false;
+
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age >= 18;
+  };
+
+  const toDateInputValue = (v) => {
+    if (!v) return "";
+    if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return "";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const copyToClipboard = async (text, label = "Nội dung") => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(`Đã copy ${label}`, "success");
+    } catch {
+      showToast("Không thể copy, vui lòng thử lại", "error");
+    }
+  };
+
   // Query list teachers
   const teachersQuery = useQuery({
     queryKey: [
@@ -81,6 +171,27 @@ export default function AdminTeachersPage() {
       }),
     keepPreviousData: true,
   });
+
+  const subjectsQuery = useQuery({
+    queryKey: [
+      "subjects",
+      { page: 0, pageSize: 1000, search: "", status: "ACTIVE" },
+    ],
+    queryFn: () =>
+      getSubjects({ page: 0, pageSize: 1000, search: "", status: "ACTIVE" }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // robust: apiGet thường trả {data,total}
+  const subjectOptions = useMemo(() => {
+    const d = subjectsQuery.data;
+    if (!d) return [];
+    // trường hợp getSubjects trả {data,total}
+    if (Array.isArray(d.data)) return d.data;
+    // trường hợp trả thẳng array
+    if (Array.isArray(d)) return d;
+    return [];
+  }, [subjectsQuery.data]);
 
   const createMutation = useMutation({
     mutationFn: (payload) => createTeacher(payload),
@@ -159,30 +270,85 @@ export default function AdminTeachersPage() {
     setFormValues((prev) => ({ ...prev, [field]: value }));
   };
 
+  const openTeacherDrawer = (t) => {
+    setSelectedTeacher(t);
+    setOpenDrawer(true);
+  };
+
+  const closeTeacherDrawer = () => {
+    setOpenDrawer(false);
+    setSelectedTeacher(null);
+  };
+
   const handleSubmitForm = () => {
-    if (!formValues.fullname) {
+    const fullname = toTitleCase(formValues.fullname || "");
+    const email = formValues.email?.trim() || "";
+    const dob = formValues.dob || "";
+    const gender = formValues.gender || "";
+    const address = formValues.address?.trim() || "";
+    const phoneDigits = formValues.phone
+      ? normalizeDigits(formValues.phone)
+      : "";
+    const citizenDigits = formValues.citizenid
+      ? normalizeDigits(formValues.citizenid)
+      : "";
+    const mainsubject = formValues.mainsubject || "";
+    const status = formValues.status || "ACTIVE";
+    const note = formValues.note?.trim() || "";
+
+    if (!fullname) {
       alert("Vui lòng nhập họ tên giáo viên");
       return;
     }
 
+    if (email && !isAllowedEmail(email)) {
+      alert(
+        "Email không hợp lệ. Chỉ chấp nhận @gmail.com hoặc domain .edu/.edu.vn/.ac.vn"
+      );
+      return;
+    }
+
+    if (dob && !isAtLeast18(dob)) {
+      alert("Giáo viên phải đủ 18 tuổi. Vui lòng nhập lại ngày sinh.");
+      return;
+    }
+
+    if (phoneDigits && !isValidPhoneVN(phoneDigits)) {
+      alert("SĐT không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.");
+      return;
+    }
+
+    if (citizenDigits && !isValidCitizenId(citizenDigits)) {
+      alert("CCCD không hợp lệ. CCCD phải đủ 12 số.");
+      return;
+    }
+
     const payload = {
-      ...formValues,
-      id: formValues.id?.trim() || undefined,
-      fullname: formValues.fullname.trim(),
-      email: formValues.email.trim() || undefined,
-      dob: formValues.dob || undefined,
-      gender: formValues.gender || undefined,
-      address: formValues.address || undefined,
-      phone: formValues.phone || undefined,
-      citizenid: formValues.citizenid || undefined,
-      mainsubject: formValues.mainsubject || undefined,
-      status: formValues.status || undefined,
-      note: formValues.note || undefined,
+      ...(formValues.id?.trim() ? { id: formValues.id.trim() } : {}),
+
+      fullname,
+      email: email || undefined,
+      dob: dob || undefined,
+      gender: gender || undefined,
+      address: address || undefined,
+      phone: phoneDigits || undefined,
+      citizenid: citizenDigits || undefined,
+      mainsubject: mainsubject || undefined,
+      status: status || undefined,
+      note: note || undefined,
     };
-    console.log("Dữ liệu gửi đi:", payload);
+
+    if (formValues.fullname !== fullname) {
+      handleFormChange("fullname", fullname);
+    }
+    if (formValues.phone && phoneDigits !== formValues.phone) {
+      handleFormChange("phone", phoneDigits);
+    }
+    if (formValues.citizenid && citizenDigits !== formValues.citizenid) {
+      handleFormChange("citizenid", citizenDigits);
+    }
 
     if (editingTeacher) {
-      // Không cho đổi mã GV (id) khi edit, trừ khi bạn muốn cho phép
       const { id, ...rest } = payload;
       updateMutation.mutate({ id: editingTeacher.id, payload: rest });
     } else {
@@ -219,18 +385,25 @@ export default function AdminTeachersPage() {
           sx={{ minWidth: 260 }}
         />
 
-        <TextField
-          label="Lọc theo môn (mainsubject)"
-          size="small"
-          value={subjectFilter === "ALL" ? "" : subjectFilter}
-          onChange={(e) => {
-            const val = e.target.value;
-            setSubjectFilter(val ? val : "ALL");
-            setPage(0);
-          }}
-          sx={{ minWidth: 180 }}
-          placeholder="VD: Toán, Ngữ văn..."
-        />
+        <FormControl size="small" sx={{ minWidth: 220 }}>
+          <InputLabel>Môn</InputLabel>
+          <Select
+            label="Môn"
+            value={subjectFilter}
+            onChange={(e) => {
+              setSubjectFilter(e.target.value);
+              setPage(0);
+            }}
+          >
+            <MenuItem value="ALL">Tất cả</MenuItem>
+
+            {subjectOptions.map((s) => (
+              <MenuItem key={s.id} value={s.name}>
+                {s.name} ({s.code})
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
         <FormControl size="small" sx={{ minWidth: 140 }}>
           <InputLabel>Trạng thái</InputLabel>
@@ -277,7 +450,12 @@ export default function AdminTeachersPage() {
             </TableHead>
             <TableBody>
               {rows.map((t) => (
-                <TableRow key={t.id}>
+                <TableRow
+                  key={t.id}
+                  hover
+                  sx={{ cursor: "pointer" }}
+                  onClick={() => openTeacherDrawer(t)}
+                >
                   <TableCell>{t.id}</TableCell>
                   <TableCell>{t.fullname}</TableCell>
                   <TableCell>{t.mainsubject}</TableCell>
@@ -298,13 +476,20 @@ export default function AdminTeachersPage() {
                       <>
                         <IconButton
                           size="small"
-                          onClick={() => handleOpenEdit(t)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEdit(t);
+                          }}
                         >
                           <EditIcon fontSize="small" />
                         </IconButton>
+
                         <IconButton
                           size="small"
-                          onClick={() => handleDeleteTeacher(t)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTeacher(t);
+                          }}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -365,6 +550,12 @@ export default function AdminTeachersPage() {
                   label="Họ tên giáo viên"
                   value={formValues.fullname}
                   onChange={(e) => handleFormChange("fullname", e.target.value)}
+                  onBlur={() =>
+                    handleFormChange(
+                      "fullname",
+                      toTitleCase(formValues.fullname)
+                    )
+                  }
                   fullWidth
                 />
               </Grid>
@@ -434,15 +625,24 @@ export default function AdminTeachersPage() {
               </Grid>
 
               <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Môn chính (mainsubject)"
-                  value={formValues.mainsubject}
-                  onChange={(e) =>
-                    handleFormChange("mainsubject", e.target.value)
-                  }
-                  fullWidth
-                  placeholder="VD: Toán, Ngữ văn, Tiếng Anh..."
-                />
+                <FormControl fullWidth>
+                  <InputLabel>Môn chính</InputLabel>
+                  <Select
+                    label="Môn chính"
+                    value={formValues.mainsubject || ""}
+                    onChange={(e) =>
+                      handleFormChange("mainsubject", e.target.value)
+                    }
+                  >
+                    <MenuItem value="">Chưa chọn</MenuItem>
+
+                    {subjectOptions.map((s) => (
+                      <MenuItem key={s.id} value={s.name}>
+                        {s.name} ({s.code})
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
 
               <Grid item xs={12} sm={6}>
@@ -483,6 +683,303 @@ export default function AdminTeachersPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Drawer
+        anchor="right"
+        open={openDrawer}
+        onClose={closeTeacherDrawer}
+        PaperProps={{
+          sx: {
+            width: { xs: "100%", sm: 440 },
+            p: 2.25,
+            borderTopLeftRadius: 16,
+            borderBottomLeftRadius: 16,
+          },
+        }}
+      >
+        {!selectedTeacher ? null : (
+          <Stack spacing={2.25} sx={{ height: "100%" }}>
+            {/* Header */}
+            <Box
+              sx={{
+                p: 1.75,
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "background.paper",
+              }}
+            >
+              <Stack direction="row" spacing={1.5} alignItems="center">
+                <Avatar sx={{ width: 52, height: 52 }}>
+                  {(selectedTeacher.fullname || "?")
+                    .trim()
+                    .charAt(0)
+                    .toUpperCase()}
+                </Avatar>
+
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 700, lineHeight: 1.2 }}
+                    noWrap
+                  >
+                    {selectedTeacher.fullname}
+                  </Typography>
+
+                  {/* ID + subject + copy */}
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={{ mt: 0.25 }}
+                  >
+                    {/* Mã GV + copy dính sát */}
+                    <Stack direction="row" spacing={0.25} alignItems="center">
+                      <Typography variant="body2" color="text.secondary">
+                        {selectedTeacher.id}
+                      </Typography>
+
+                      <Tooltip title="Copy mã giáo viên">
+                        <IconButton
+                          size="small"
+                          sx={{ p: 0.25 }}
+                          onClick={() =>
+                            copyToClipboard(selectedTeacher.id, "mã giáo viên")
+                          }
+                        >
+                          <ContentCopyIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+
+                    <Typography variant="body2" color="text.secondary">
+                      •
+                    </Typography>
+
+                    <Typography variant="body2" color="text.secondary" noWrap>
+                      {selectedTeacher.mainsubject || "Chưa chọn môn"}
+                    </Typography>
+                  </Stack>
+                </Box>
+
+                <Chip
+                  label={selectedTeacher.status}
+                  color={
+                    selectedTeacher.status === "ACTIVE" ? "success" : "default"
+                  }
+                  size="small"
+                  sx={{ fontWeight: 600 }}
+                />
+              </Stack>
+            </Box>
+
+            {/* Info card */}
+            <Box
+              sx={{
+                p: 1.75,
+                borderRadius: 3,
+                border: "1px solid",
+                borderColor: "divider",
+                bgcolor: "background.default",
+              }}
+            >
+              <Stack spacing={1.25}>
+                {/* Email row */}
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ width: 92, flexShrink: 0 }}
+                  >
+                    Email
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    sx={{ flex: 1, minWidth: 0 }}
+                    noWrap
+                  >
+                    {selectedTeacher.email || "-"}
+                  </Typography>
+
+                  {selectedTeacher.email && (
+                    <Tooltip title="Copy email">
+                      <IconButton
+                        size="small"
+                        sx={{ p: 0.25 }}
+                        onClick={() =>
+                          copyToClipboard(selectedTeacher.email, "email")
+                        }
+                      >
+                        <ContentCopyIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+
+                {/* DOB */}
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ width: 92, flexShrink: 0 }}
+                  >
+                    Ngày sinh
+                  </Typography>
+                  <Typography variant="body2">
+                    {toDateInputValue(selectedTeacher.dob) || "-"}
+                  </Typography>
+                </Stack>
+
+                {/* Gender */}
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ width: 92, flexShrink: 0 }}
+                  >
+                    Giới tính
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedTeacher.gender === "M"
+                      ? "Nam"
+                      : selectedTeacher.gender === "F"
+                      ? "Nữ"
+                      : "Khác"}
+                  </Typography>
+                </Stack>
+
+                {/* Phone + copy */}
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ width: 92, flexShrink: 0 }}
+                  >
+                    Số điện thoại
+                  </Typography>
+
+                  <Typography
+                    variant="body2"
+                    sx={{ flex: 1, minWidth: 0 }}
+                    noWrap
+                  >
+                    {selectedTeacher.phone || "-"}
+                  </Typography>
+
+                  {selectedTeacher.phone && (
+                    <Tooltip title="Copy số điện thoại">
+                      <IconButton
+                        size="small"
+                        sx={{ p: 0.25 }}
+                        onClick={() =>
+                          copyToClipboard(
+                            selectedTeacher.phone,
+                            "số điện thoại"
+                          )
+                        }
+                      >
+                        <ContentCopyIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+
+                {/* CCCD */}
+                <Stack direction="row" alignItems="center" spacing={1}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ width: 92, flexShrink: 0 }}
+                  >
+                    CCCD
+                  </Typography>
+                  <Typography variant="body2">
+                    {selectedTeacher.citizenid || "-"}
+                  </Typography>
+                </Stack>
+
+                {/* Address */}
+                <Stack direction="row" alignItems="flex-start" spacing={1}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ width: 92, flexShrink: 0, pt: 0.25 }}
+                  >
+                    Địa chỉ
+                  </Typography>
+                  <Typography variant="body2" sx={{ flex: 1 }}>
+                    {selectedTeacher.address || "-"}
+                  </Typography>
+                </Stack>
+              </Stack>
+            </Box>
+
+            {/* Note */}
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, mb: 1, color: "text.secondary" }}
+              >
+                Ghi chú
+              </Typography>
+              <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 3 }}>
+                <Typography variant="body2" sx={{ whiteSpace: "pre-wrap" }}>
+                  {selectedTeacher.note || "Không có ghi chú"}
+                </Typography>
+              </Paper>
+            </Box>
+
+            <Box flexGrow={1} />
+
+            {/* Actions */}
+            <Divider />
+            <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <Button onClick={closeTeacherDrawer}>Đóng</Button>
+
+              {isAdmin && (
+                <>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => {
+                      closeTeacherDrawer();
+                      handleDeleteTeacher(selectedTeacher);
+                    }}
+                  >
+                    Xóa
+                  </Button>
+
+                  <Button
+                    variant="contained"
+                    onClick={() => {
+                      closeTeacherDrawer();
+                      handleOpenEdit(selectedTeacher);
+                    }}
+                  >
+                    Chỉnh sửa
+                  </Button>
+                </>
+              )}
+            </Stack>
+          </Stack>
+        )}
+      </Drawer>
+      <Snackbar
+        open={toast.open}
+        autoHideDuration={2000}
+        onClose={closeToast}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={closeToast}
+          severity={toast.severity}
+          variant="filled"
+          sx={{ borderRadius: 2 }}
+        >
+          {toast.message}
+        </Alert>
+      </Snackbar>
     </AppLayout>
   );
 }
