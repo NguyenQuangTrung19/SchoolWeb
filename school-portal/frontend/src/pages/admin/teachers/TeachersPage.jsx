@@ -94,6 +94,16 @@ export default function AdminTeachersPage() {
   const [openDrawer, setOpenDrawer] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
 
+  const openTeacherDrawer = (t) => {
+    setSelectedTeacher(t);
+    setOpenDrawer(true);
+  };
+
+  const closeTeacherDrawer = () => {
+    setOpenDrawer(false);
+    setSelectedTeacher(null);
+  };
+
   const toTitleCase = (s = "") =>
     s
       .trim()
@@ -198,7 +208,9 @@ export default function AdminTeachersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(["teachers"]);
       handleCloseDialog();
+      showToast("Đã tạo giáo viên", "success");
     },
+    onError: () => showToast("Tạo giáo viên thất bại", "error"),
   });
 
   const updateMutation = useMutation({
@@ -206,14 +218,18 @@ export default function AdminTeachersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries(["teachers"]);
       handleCloseDialog();
+      showToast("Đã cập nhật giáo viên", "success");
     },
+    onError: () => showToast("Cập nhật thất bại", "error"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => deleteTeacher(id),
     onSuccess: () => {
       queryClient.invalidateQueries(["teachers"]);
+      showToast("Đã xóa giáo viên", "success");
     },
+    onError: () => showToast("Xóa thất bại", "error"),
   });
 
   const handleChangePage = (e, newPage) => {
@@ -249,7 +265,7 @@ export default function AdminTeachersPage() {
       id: teacher.id,
       fullname: teacher.fullname,
       email: teacher.email,
-      dob: teacher.dob || "",
+      dob: toDateInputValue(teacher.dob),
       gender: teacher.gender || "",
       address: teacher.address || "",
       phone: teacher.phone || "",
@@ -268,16 +284,6 @@ export default function AdminTeachersPage() {
 
   const handleFormChange = (field, value) => {
     setFormValues((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const openTeacherDrawer = (t) => {
-    setSelectedTeacher(t);
-    setOpenDrawer(true);
-  };
-
-  const closeTeacherDrawer = () => {
-    setOpenDrawer(false);
-    setSelectedTeacher(null);
   };
 
   const handleSubmitForm = () => {
@@ -372,68 +378,70 @@ export default function AdminTeachersPage() {
       </Typography>
 
       {/* Bộ lọc */}
-      <Box display="flex" gap={2} mb={2} flexWrap="wrap">
-        <TextField
-          label="Tìm kiếm (mã GV, tên, SĐT)"
-          size="small"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(0);
-          }}
-          sx={{ minWidth: 260 }}
-        />
-
-        <FormControl size="small" sx={{ minWidth: 220 }}>
-          <InputLabel>Môn</InputLabel>
-          <Select
-            label="Môn"
-            value={subjectFilter}
+      <Paper sx={{ p: 2, mb: 2, borderRadius: 3 }}>
+        <Box display="flex" gap={2} mb={2} flexWrap="wrap">
+          <TextField
+            label="Tìm kiếm (mã GV, tên, SĐT)"
+            size="small"
+            value={search}
             onChange={(e) => {
-              setSubjectFilter(e.target.value);
+              setSearch(e.target.value);
               setPage(0);
             }}
-          >
-            <MenuItem value="ALL">Tất cả</MenuItem>
+            sx={{ minWidth: 260 }}
+          />
 
-            {subjectOptions.map((s) => (
-              <MenuItem key={s.id} value={s.name}>
-                {s.name} ({s.code})
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+          <FormControl size="small" sx={{ minWidth: 220 }}>
+            <InputLabel>Môn</InputLabel>
+            <Select
+              label="Môn"
+              value={subjectFilter}
+              onChange={(e) => {
+                setSubjectFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <MenuItem value="ALL">Tất cả</MenuItem>
 
-        <FormControl size="small" sx={{ minWidth: 140 }}>
-          <InputLabel>Trạng thái</InputLabel>
-          <Select
-            label="Trạng thái"
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(0);
-            }}
-          >
-            <MenuItem value="ALL">Tất cả</MenuItem>
-            <MenuItem value="ACTIVE">ACTIVE</MenuItem>
-            <MenuItem value="INACTIVE">INACTIVE</MenuItem>
-          </Select>
-        </FormControl>
+              {subjectOptions.map((s) => (
+                <MenuItem key={s.id} value={s.name}>
+                  {s.name} ({s.code})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        <Box flexGrow={1} />
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Trạng thái</InputLabel>
+            <Select
+              label="Trạng thái"
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(0);
+              }}
+            >
+              <MenuItem value="ALL">Tất cả</MenuItem>
+              <MenuItem value="ACTIVE">ACTIVE</MenuItem>
+              <MenuItem value="INACTIVE">INACTIVE</MenuItem>
+            </Select>
+          </FormControl>
 
-        {isAdmin && (
-          <Button variant="contained" onClick={handleOpenCreate}>
-            Thêm giáo viên
-          </Button>
-        )}
-      </Box>
+          <Box flexGrow={1} />
+
+          {isAdmin && (
+            <Button variant="contained" onClick={handleOpenCreate}>
+              Thêm giáo viên
+            </Button>
+          )}
+        </Box>
+      </Paper>
 
       {/* Bảng giáo viên */}
       {isLoading ? (
         <div>Đang tải...</div>
       ) : (
-        <>
+        <Paper sx={{ borderRadius: 3, overflow: "hidden" }}>
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -517,7 +525,7 @@ export default function AdminTeachersPage() {
             onRowsPerPageChange={handleChangeRowsPerPage}
             rowsPerPageOptions={[5, 10, 20]}
           />
-        </>
+        </Paper>
       )}
 
       {/* Dialog thêm/sửa giáo viên */}

@@ -131,7 +131,7 @@ export default function AdminStudentsPage() {
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  const isAtLeast18 = (dobStr) => {
+  const isAtLeast10 = (dobStr) => {
     if (!dobStr) return true;
     const dob = new Date(dobStr);
     if (Number.isNaN(dob.getTime())) return false;
@@ -140,7 +140,7 @@ export default function AdminStudentsPage() {
     let age = today.getFullYear() - dob.getFullYear();
     const m = today.getMonth() - dob.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-    return age >= 18;
+    return age >= 10;
   };
 
   const copyToClipboard = async (text, label = "Nội dung") => {
@@ -311,7 +311,7 @@ export default function AdminStudentsPage() {
       return showToast("Vui lòng chọn lớp hiện tại", "warning");
     }
 
-    if (dob && !isAtLeast18(dob)) {
+    if (dob && !isAtLeast10(dob)) {
       showToast(
         "Học sinh phải nhập tuổi phù hợp. Vui lòng nhập lại ngày sinh."
       );
