@@ -297,29 +297,28 @@ export default function AdminTeachersPage() {
     const note = formValues.note?.trim() || "";
 
     if (!fullname) {
-      alert("Vui lòng nhập họ tên giáo viên");
-      return;
+      return showToast("Vui lòng nhập họ tên giáo viên", "warning");
     }
 
     if (email && !isAllowedEmail(email)) {
-      alert(
+      showToast(
         "Email không hợp lệ. Chỉ chấp nhận @gmail.com hoặc domain .edu/.edu.vn/.ac.vn"
       );
       return;
     }
 
     if (dob && !isAtLeast18(dob)) {
-      alert("Giáo viên phải đủ 18 tuổi. Vui lòng nhập lại ngày sinh.");
+      showToast("Giáo viên phải đủ 18 tuổi. Vui lòng nhập lại ngày sinh.");
       return;
     }
 
     if (phoneDigits && !isValidPhoneVN(phoneDigits)) {
-      alert("SĐT không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.");
+      showToast("SĐT không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.");
       return;
     }
 
     if (citizenDigits && !isValidCitizenId(citizenDigits)) {
-      alert("CCCD không hợp lệ. CCCD phải đủ 12 số.");
+      showToast("CCCD không hợp lệ. CCCD phải đủ 12 số.");
       return;
     }
 
