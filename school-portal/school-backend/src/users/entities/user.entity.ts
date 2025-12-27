@@ -26,14 +26,19 @@ export class User {
   @Column({ type: 'varchar', length: 50, unique: true })
   username: string;
 
+  @Column({ type: 'varchar', length: 100 })
+  password: string;
+
   @Column({ name: 'fullname', type: 'varchar', length: 100 })
   fullname: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  email: string | null;
+  // ✅ NOT NULL
+  @Column({ type: 'varchar', length: 100 })
+  email: string;
 
-  @Column({ type: 'varchar', length: 20, nullable: true })
-  phone: string | null;
+  // ✅ NOT NULL
+  @Column({ type: 'varchar', length: 20 })
+  phone: string;
 
   @Column({ type: 'enum', enum: UserRole })
   role: UserRole;

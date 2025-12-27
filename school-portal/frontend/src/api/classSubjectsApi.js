@@ -1,5 +1,4 @@
 // src/api/classSubjectsApi.js
-
 import { apiGet, apiPost, apiPut, apiDelete } from "./http";
 
 export function getClassSubjects({
@@ -41,4 +40,8 @@ export function updateClassSubject(id, payload) {
 
 export function deleteClassSubject(id) {
   return apiDelete(`/class-subjects/${id}`);
+}
+
+export async function getAllClassSubjectsForTeacher(teacherId) {
+  return getClassSubjects({ page: 0, pageSize: 9999, teacherId });
 }

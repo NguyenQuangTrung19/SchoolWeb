@@ -1,5 +1,4 @@
 // src/api/teachersApi.js
-
 import { apiGet, apiPost, apiPut, apiDelete } from "./http";
 
 const toDateInputValue = (v) => {
@@ -14,9 +13,20 @@ const toDateInputValue = (v) => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-export async function getTeachers(params) {
-  const q = new URLSearchParams(params).toString();
-  const res = await apiGet(`/teachers?${q}`); // res = { data, total }
+// Lọc param undefined/null/""
+const buildQuery = (params = {}) => {
+  const clean = {};
+  Object.entries(params).forEach(([k, v]) => {
+    if (v === undefined || v === null) return;
+    if (typeof v === "string" && v.trim() === "") return;
+    clean[k] = String(v);
+  });
+  return new URLSearchParams(clean).toString();
+};
+
+export async function getTeachers(params = {}) {
+  const q = buildQuery(params);
+  const res = await apiGet(`/teachers${q ? `?${q}` : ""}`);
 
   if (res?.data && Array.isArray(res.data)) {
     return {
@@ -27,7 +37,6 @@ export async function getTeachers(params) {
       })),
     };
   }
-
   return res;
 }
 

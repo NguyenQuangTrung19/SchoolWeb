@@ -1,3 +1,4 @@
+// src/class_subjects/entities/class-subject.entity.ts
 import {
   Entity,
   PrimaryGeneratedColumn,

@@ -100,7 +100,7 @@ export default function AdminUsersPage() {
     setToast({ open: true, message, severity });
   };
 
-  const closeToast = (event, reason) => {
+  const closeToast = (_event, reason) => {
     if (reason === "clickaway") return;
     setToast((prev) => ({ ...prev, open: false }));
   };
@@ -157,6 +157,18 @@ export default function AdminUsersPage() {
     return age >= 18;
   };
 
+  const isAtLeast10 = (dobStr) => {
+    if (!dobStr) return true;
+    const dob = new Date(dobStr);
+    if (Number.isNaN(dob.getTime())) return false;
+
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age >= 10;
+  };
+
   const toDateInputValue = (v) => {
     if (!v) return "";
     if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
@@ -184,7 +196,7 @@ export default function AdminUsersPage() {
     queryKey: ["classes", { page: 0, pageSize: 200, search: "", grade: "ALL" }],
     queryFn: () =>
       getClasses({ page: 0, pageSize: 200, search: "", grade: "ALL" }),
-    enabled: openDialog && formValues.role === "STUDENT" && !editingUser,
+    enabled: openDialog && !editingUser && formValues.role === "STUDENT",
   });
 
   const classes = classesQuery.data?.data || [];
@@ -311,39 +323,63 @@ export default function AdminUsersPage() {
     setFormValues((prev) => ({ ...prev, [field]: value }));
   };
 
+  const isCreateMode = !editingUser;
+  const isStudentCreate = isCreateMode && formValues.role === "STUDENT";
+  const isTeacherCreate = isCreateMode && formValues.role === "TEACHER";
+  const isAdminCreate = isCreateMode && formValues.role === "ADMIN";
+
+  // Username REQUIRED only for ADMIN create, or editing user
+  const mustHaveUsername = !!editingUser || isAdminCreate;
+
   const validateCommonRequired = () => {
-    const username = formValues.username?.trim();
     const fullname = toTitleCase(formValues.fullname || "");
     const email = formValues.email?.trim() || "";
     const phoneDigits = normalizeDigits(formValues.phone || "");
 
-    if (!username) return showToast("Vui lòng nhập Username", "warning"), false;
-    if (!fullname) return showToast("Vui lòng nhập Họ tên", "warning"), false;
+    if (mustHaveUsername && !formValues.username?.trim()) {
+      showToast("Vui lòng nhập Username", "warning");
 
-    if (!email) return showToast("Vui lòng nhập Email", "warning"), false;
-    if (email && !isAllowedEmail(email))
-      return (
-        showToast(
-          "Email không hợp lệ. Chỉ chấp nhận @gmail.com hoặc domain .edu/.edu.vn/.ac.vn",
-          "warning"
-        ),
-        false
+      return false;
+    }
+
+    if (!fullname) {
+      showToast("Vui lòng nhập Họ tên", "warning");
+      return false;
+    }
+
+    if (!email) {
+      showToast("Vui lòng nhập Email", "warning");
+      return false;
+    }
+    if (!isAllowedEmail(email)) {
+      showToast(
+        "Email không hợp lệ. Chỉ chấp nhận @gmail.com hoặc domain .edu/.edu.vn/.ac.vn",
+        "warning"
+      );
+      return false;
+    }
+
+    if (!phoneDigits) {
+      showToast("Vui lòng nhập SĐT", "warning");
+      return false;
+    }
+
+    if (!isValidPhoneVN(phoneDigits)) {
+      showToast(
+        "SĐT không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.",
+        "warning"
       );
 
-    if (!phoneDigits) return showToast("Vui lòng nhập SĐT", "warning"), false;
-    if (!isValidPhoneVN(phoneDigits))
-      return (
-        showToast(
-          "SĐT không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.",
-          "warning"
-        ),
-        false
-      );
+      return false;
+    }
 
-    if (formValues.fullname !== fullname)
+    if (fullname !== formValues.fullname)
       handleFormChange("fullname", fullname);
-    if (formValues.phone !== phoneDigits)
+
+    if (phoneDigits !== (formValues.phone || ""))
       handleFormChange("phone", phoneDigits);
+
+    if (email !== (formValues.email || "")) handleFormChange("email", email);
 
     return true;
   };
@@ -355,9 +391,9 @@ export default function AdminUsersPage() {
       updateUserMutation.mutate({
         id: editingUser.id,
         payload: {
-          fullname: toTitleCase(formValues.fullname || ""),
+          fullname: toTitleCase(formValues.fullname),
           email: formValues.email.trim(),
-          phone: normalizeDigits(formValues.phone || ""),
+          phone: normalizeDigits(formValues.phone),
           role: formValues.role,
         },
       });
@@ -366,94 +402,175 @@ export default function AdminUsersPage() {
 
     if (!validateCommonRequired()) return;
 
-    const common = {
-      username: formValues.username.trim(),
-      fullname: toTitleCase(formValues.fullname || ""),
-      email: formValues.email.trim(),
-      phone: normalizeDigits(formValues.phone || ""),
-    };
-
-    // ADMIN -> createUser
     if (formValues.role === "ADMIN") {
-      createUserMutation.mutate({ ...common, role: "ADMIN" });
+      createUserMutation.mutate({
+        username: formValues.username.trim(),
+        fullname: toTitleCase(formValues.fullname),
+        email: formValues.email.trim(),
+        phone: normalizeDigits(formValues.phone),
+        role: "ADMIN",
+      });
+
       return;
     }
 
-    // STUDENT -> createStudent (backend tạo users + students)
     if (formValues.role === "STUDENT") {
-      if (!formValues.current_class_id)
-        return showToast("Vui lòng chọn Lớp hiện tại", "warning");
+      if (!formValues.current_class_id) {
+        showToast("Vui lòng chọn Lớp hiện tại", "warning");
+        return;
+      }
 
-      if (!formValues.guardian_name?.trim())
-        return showToast("Vui lòng nhập Tên người giám hộ", "warning");
+      if (!formValues.guardian_name?.trim()) {
+        showToast("Vui lòng nhập Tên người giám hộ", "warning");
+        return;
+      }
+
+      if (!formValues.guardian_phone?.trim()) {
+        showToast("Vui lòng nhập SĐT người giám hộ", "warning");
+        return;
+      }
+
+      if (!formValues.guardian_citizenid?.trim()) {
+        showToast("Vui lòng nhập CCCD của người giám hộ", "warning");
+        return;
+      }
+
+      if (formValues.dob && !isAtLeast10(formValues.dob)) {
+        showToast("Học sinh phải nhập tuổi chính xác.", "warning");
+        return;
+      }
 
       const guardianPhoneDigits = normalizeDigits(
         formValues.guardian_phone || ""
       );
-      if (!guardianPhoneDigits)
-        return showToast("Vui lòng nhập SĐT người giám hộ", "warning");
-      if (!isValidPhoneVN(guardianPhoneDigits))
-        return showToast(
+      if (!isValidPhoneVN(guardianPhoneDigits)) {
+        showToast(
           "SĐT giám hộ không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.",
           "warning"
         );
+        return;
+      }
 
-      const guardianCitizen = normalizeDigits(
+      const guardianCitizenDigits = normalizeDigits(
         formValues.guardian_citizenid || ""
       );
-      if (guardianCitizen && !isValidCitizenId(guardianCitizen))
-        return showToast(
-          "CCCD giám hộ không hợp lệ. CCCD phải đủ 12 số.",
-          "warning"
-        );
+      if (!isValidCitizenId(guardianCitizenDigits)) {
+        showToast("CCCD giám hộ không hợp lệ. CCCD phải đủ 12 số.", "warning");
+        return;
+      }
+
+      const username =
+        formValues.username?.trim().length > 0
+          ? formValues.username.trim()
+          : undefined;
 
       createStudentMutation.mutate({
         id: formValues.student_id?.trim() || undefined,
-        ...common,
-
+        username,
+        fullname: toTitleCase(formValues.fullname),
+        email: formValues.email.trim(),
+        phone: normalizeDigits(formValues.phone),
         dob: formValues.dob || undefined,
         gender: formValues.gender || undefined,
         address: formValues.address?.trim() || undefined,
         current_class_id: Number(formValues.current_class_id),
-
-        guardian_name: toTitleCase(formValues.guardian_name || ""),
-        guardian_phone: guardianPhoneDigits,
+        guardian_name: toTitleCase(formValues.guardian_name.trim()),
+        guardian_phone: normalizeDigits(formValues.guardian_phone),
         guardian_job: formValues.guardian_job?.trim() || undefined,
-        guardian_citizenid: guardianCitizen || undefined,
-
+        guardian_citizenid: formValues.guardian_citizenid.trim(),
         status: formValues.status || "ACTIVE",
         note: formValues.note?.trim() || undefined,
       });
+
       return;
     }
 
-    // TEACHER -> createTeacher (backend tạo users + teachers)
     if (formValues.role === "TEACHER") {
-      const dob = formValues.dob || "";
-      if (dob && !isAtLeast18(dob))
-        return showToast(
+      if (formValues.dob && !isAtLeast18(formValues.dob)) {
+        showToast(
           "Giáo viên phải đủ 18 tuổi. Vui lòng nhập lại ngày sinh.",
           "warning"
         );
+        return;
+      }
 
+      const email = formValues.email?.trim() || "";
+      if (!email) {
+        showToast("Vui lòng nhập Email", "warning");
+        return;
+      }
+
+      if (!isAllowedEmail(email)) {
+        showToast(
+          "Email không hợp lệ. Chỉ chấp nhận @gmail.com hoặc domain .edu/.edu.vn/.ac.vn",
+          "warning"
+        );
+        return;
+      }
+
+      const phoneDigits = normalizeDigits(formValues.phone || "");
+      if (!phoneDigits) {
+        showToast("Vui lòng nhập SĐT", "warning");
+        return;
+      }
+      if (!isValidPhoneVN(phoneDigits)) {
+        showToast(
+          "SĐT không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.",
+          "warning"
+        );
+        return;
+      }
+
+      // CCCD: nên bắt buộc cho TEACHER (tuỳ bạn)
       const citizenDigits = normalizeDigits(formValues.citizenid || "");
-      if (citizenDigits && !isValidCitizenId(citizenDigits))
-        return showToast("CCCD không hợp lệ. CCCD phải đủ 12 số.", "warning");
+      if (!citizenDigits) {
+        showToast("Vui lòng nhập CCCD", "warning");
+        return;
+      }
+
+      if (!isValidCitizenId(citizenDigits)) {
+        showToast("CCCD không hợp lệ. CCCD phải đủ 12 số.", "warning");
+        return;
+      }
+
+      if (!formValues.mainsubject?.trim()) {
+        showToast("Vui lòng chọn/nhập môn chính", "warning");
+        return;
+      }
+
+      if (email !== (formValues.email || "")) handleFormChange("email", email);
+      if (phoneDigits !== (formValues.phone || ""))
+        handleFormChange("phone", phoneDigits);
+      if (citizenDigits !== (formValues.citizenid || ""))
+        handleFormChange("citizenid", citizenDigits);
+
+      const teacherId =
+        formValues.teacher_id?.trim().length > 0
+          ? formValues.teacher_id.trim()
+          : undefined;
+
+      const username =
+        formValues.username?.trim().length > 0
+          ? formValues.username.trim()
+          : undefined;
 
       createTeacherMutation.mutate({
-        ...(formValues.teacher_id?.trim()
-          ? { id: formValues.teacher_id.trim() }
-          : {}),
-        ...common,
+        id: teacherId,
+        username,
+        fullname: toTitleCase(formValues.fullname),
+        email: formValues.email.trim(),
+        phone: normalizeDigits(formValues.phone),
 
         dob: formValues.dob || undefined,
         gender: formValues.gender || undefined,
         address: formValues.address?.trim() || undefined,
-        citizenid: citizenDigits || undefined,
-        mainsubject: formValues.mainsubject || undefined,
+        citizenid: formValues.citizenid?.trim() || undefined,
+        mainsubject: formValues.mainsubject?.trim() || undefined,
         status: formValues.status || "ACTIVE",
         note: formValues.note?.trim() || undefined,
       });
+
+      return;
     }
   };
 
@@ -641,28 +758,53 @@ export default function AdminUsersPage() {
                 <Divider sx={{ my: 1.5 }} />
 
                 <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Username"
-                      value={formValues.username}
-                      onChange={(e) =>
-                        handleFormChange("username", e.target.value)
-                      }
-                      fullWidth
-                      disabled={!!editingUser}
-                    />
-                  </Grid>
+                  {(editingUser || formValues.role === "ADMIN") && (
+                    <Grid item xs={12} sm={6}>
+                      <TextField
+                        label="Username"
+                        value={formValues.username}
+                        onChange={(e) =>
+                          handleFormChange("username", e.target.value)
+                        }
+                        fullWidth
+                        disabled={!!editingUser} // tránh đổi username khi edit
+                        helperText={
+                          editingUser
+                            ? "Không thể đổi username khi chỉnh sửa"
+                            : "Bắt buộc với ADMIN"
+                        }
+                      />
+                    </Grid>
+                  )}
 
-                  <Grid item xs={12} sm={6}>
+                  <Grid
+                    item
+                    xs={12}
+                    sm={editingUser || formValues.role === "ADMIN" ? 6 : 6}
+                  >
                     <FormControl fullWidth>
                       <InputLabel>Role</InputLabel>
                       <Select
                         label="Role"
                         value={formValues.role}
-                        onChange={(e) =>
-                          handleFormChange("role", e.target.value)
-                        }
-                        disabled={!!editingUser}
+                        onChange={(e) => {
+                          const nextRole = e.target.value;
+                          if (
+                            !editingUser &&
+                            (nextRole === "STUDENT" || nextRole === "TEACHER")
+                          ) {
+                            setFormValues((prev) => ({
+                              ...prev,
+                              role: nextRole,
+                              username: "",
+                            }));
+                          } else {
+                            setFormValues((prev) => ({
+                              ...prev,
+                              role: nextRole,
+                            }));
+                          }
+                        }}
                       >
                         <MenuItem value="ADMIN">ADMIN</MenuItem>
                         <MenuItem value="TEACHER">TEACHER</MenuItem>
@@ -696,6 +838,7 @@ export default function AdminUsersPage() {
                         handleFormChange("email", e.target.value)
                       }
                       fullWidth
+                      helperText="Chấp nhận @gmail.com hoặc .edu/.edu.vn/.ac.vn"
                     />
                   </Grid>
 
@@ -707,6 +850,7 @@ export default function AdminUsersPage() {
                         handleFormChange("phone", e.target.value)
                       }
                       fullWidth
+                      helperText="0 + 9 chữ số (10 số)"
                     />
                   </Grid>
                 </Grid>
@@ -721,6 +865,18 @@ export default function AdminUsersPage() {
                     trang Students/Teachers.
                   </Typography>
                 )}
+                {!editingUser &&
+                  (formValues.role === "STUDENT" ||
+                    formValues.role === "TEACHER") && (
+                    <Typography
+                      variant="body2"
+                      sx={{ mt: 1 }}
+                      color="text.secondary"
+                    >
+                      Username sẽ được hệ thống tự tạo theo mã HS/GV (bạn không
+                      cần nhập).
+                    </Typography>
+                  )}
               </Paper>
             </Grid>
 
@@ -805,6 +961,13 @@ export default function AdminUsersPage() {
                           ))}
                         </Select>
                       </FormControl>
+                      {formValues.current_class_id &&
+                        classMap[formValues.current_class_id] && (
+                          <Typography variant="caption" color="text.secondary">
+                            Đã chọn:{" "}
+                            {classMap[formValues.current_class_id].name}
+                          </Typography>
+                        )}
                     </Grid>
 
                     <Grid item xs={12} sm={6}>

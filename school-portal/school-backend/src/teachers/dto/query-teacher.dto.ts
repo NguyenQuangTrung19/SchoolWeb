@@ -1,5 +1,5 @@
 // src/teachers/dto/query-teacher.dto.ts
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsIn, IsString } from 'class-validator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 
 export class QueryTeacherDto extends PaginationDto {
@@ -14,4 +14,8 @@ export class QueryTeacherDto extends PaginationDto {
   @IsOptional()
   @IsString()
   status?: string; // "ALL" | "ACTIVE" | "INACTIVE"
+
+  @IsOptional()
+  @IsIn(['0', '1', 'true', 'false'])
+  includePassword?: string;
 }

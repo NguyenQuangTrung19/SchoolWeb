@@ -1,5 +1,9 @@
 // src/users/users.service.ts
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { User, UserRole, UserStatus } from './entities/user.entity';
@@ -14,6 +18,26 @@ export class UsersService {
     private readonly usersRepo: Repository<User>,
   ) {}
 
+  private generatePassword8(): string {
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const all = lower + upper;
+    const pick = (s: string) => s[Math.floor(Math.random() * s.length)];
+
+    const arr = [pick(lower), pick(upper)];
+    while (arr.length < 8) arr.push(pick(all));
+
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr.join('');
+  }
+
+  async findByUsername(username: string) {
+    return this.usersRepo.findOne({ where: { username } });
+  }
+
   async findAll(query: QueryUserDto) {
     const page = query.page ?? 0;
     const pageSize = query.pageSize ?? 10;
@@ -22,7 +46,6 @@ export class UsersService {
 
     if (query.search) {
       const search = `%${query.search}%`;
-      // tìm theo username, fullname, email, phone
       where['$or'] = [
         { username: Like(search) },
         { fullname: Like(search) },
@@ -52,20 +75,26 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto): Promise<User> {
-    // Có thể check trùng username nếu muốn:
     const existed = await this.usersRepo.findOne({
       where: { username: dto.username },
     });
-    if (existed) {
-      throw new Error(`Username ${dto.username} already exists`);
-    }
+    if (existed)
+      throw new BadRequestException(`Username ${dto.username} already exists`);
+
+    // email/phone bắt buộc -> tuyệt đối không null
+    if (!dto.email?.trim()) throw new BadRequestException('Email là bắt buộc');
+    if (!dto.phone?.trim())
+      throw new BadRequestException('Số điện thoại là bắt buộc');
+
+    const password = dto.password?.trim() || this.generatePassword8();
 
     const user = this.usersRepo.create({
-      username: dto.username,
-      fullname: dto.fullname,
-      email: dto.email ?? null,
-      phone: dto.phone ?? null,
+      username: dto.username.trim(),
+      fullname: dto.fullname.trim(),
+      email: dto.email.trim(),
+      phone: dto.phone.trim(),
       role: dto.role,
+      password,
       status: UserStatus.ACTIVE,
     });
 
@@ -76,26 +105,21 @@ export class UsersService {
     const user = await this.usersRepo.findOne({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
 
-    // Không bắt buộc cho phép đổi username/role;
-    // nếu bạn MUỐN cho phép, để như dưới. Nếu không, bỏ 2 if đầu.
-    if (dto.username !== undefined) {
-      user.username = dto.username;
-    }
+    if (dto.username !== undefined) user.username = dto.username;
+    if (dto.role !== undefined) user.role = dto.role;
+    if (dto.fullname !== undefined) user.fullname = dto.fullname;
 
-    if (dto.role !== undefined) {
-      user.role = dto.role;
-    }
-
-    if (dto.fullname !== undefined) {
-      user.fullname = dto.fullname;
-    }
-
+    // email/phone: không cho null nữa
     if (dto.email !== undefined) {
-      user.email = dto.email ?? null;
+      if (!dto.email?.trim())
+        throw new BadRequestException('Email không được rỗng');
+      user.email = dto.email.trim();
     }
 
     if (dto.phone !== undefined) {
-      user.phone = dto.phone ?? null;
+      if (!dto.phone?.trim())
+        throw new BadRequestException('Số điện thoại không được rỗng');
+      user.phone = dto.phone.trim();
     }
 
     return this.usersRepo.save(user);
@@ -108,7 +132,6 @@ export class UsersService {
     user.status =
       user.status === UserStatus.ACTIVE ? UserStatus.LOCKED : UserStatus.ACTIVE;
 
-    const saved = await this.usersRepo.save(user);
-    return saved;
+    return this.usersRepo.save(user);
   }
 }

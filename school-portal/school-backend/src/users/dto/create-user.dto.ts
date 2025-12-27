@@ -1,20 +1,35 @@
-import { IsEmail, IsEnum, IsOptional, IsString } from 'class-validator';
+// src/users/dto/create-user.dto.ts
+import {
+  IsEmail,
+  IsEnum,
+  IsOptional,
+  IsString,
+  Length,
+  IsNotEmpty,
+} from 'class-validator';
 import { UserRole } from '../entities/user.entity';
 
 export class CreateUserDto {
+  @IsNotEmpty()
   @IsString()
-  username: string;
+  username: string; // auto gen từ techerId/studentId
 
+  @IsNotEmpty()
   @IsString()
   fullname: string;
 
   @IsOptional()
-  @IsEmail()
-  email?: string;
-
-  @IsOptional()
   @IsString()
-  phone?: string;
+  @Length(8, 100)
+  password?: string; // nếu không nhập thì service tự sinh
+
+  @IsNotEmpty()
+  @IsEmail()
+  email: string;
+
+  @IsNotEmpty()
+  @IsString()
+  phone: string;
 
   @IsEnum(UserRole)
   role: UserRole;

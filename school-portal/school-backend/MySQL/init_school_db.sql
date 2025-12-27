@@ -10,20 +10,22 @@ DROP TABLE IF EXISTS scores;
 DROP TABLE IF EXISTS attendance;
 DROP TABLE IF EXISTS materials;
 DROP TABLE IF EXISTS class_subjects;
-
 DROP TABLE IF EXISTS students;
 DROP TABLE IF EXISTS classes;
 DROP TABLE IF EXISTS subjects;
 DROP TABLE IF EXISTS teachers;
-
 DROP TABLE IF EXISTS users;
 
+-- ===============================
+-- BẢNG users  (email/phone NOT NULL)
+-- ===============================
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(50) NOT NULL UNIQUE,
+  password VARCHAR(100) NOT NULL,
   fullname VARCHAR(100) NOT NULL,
-  email VARCHAR(100) NULL,
-  phone VARCHAR(20) NULL,
+  email VARCHAR(100) NOT NULL,
+  phone VARCHAR(20) NOT NULL,
   role ENUM('ADMIN','TEACHER','STUDENT') NOT NULL,
   status ENUM('ACTIVE','LOCKED') DEFAULT 'ACTIVE',
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -31,27 +33,27 @@ CREATE TABLE users (
 );
 
 -- SEED users: 1 admin + 3 GV + 3 HS
-INSERT INTO users (id, username, fullname, email, phone, role, status) VALUES
-  (1, 'admin1', 'Quản trị viên 1', 'admin1@school.local', '0900000001', 'ADMIN',  'ACTIVE'),
-  (2, 'gv001',  'Nguyễn Văn A',    'gv001@school.local',  '0901000001', 'TEACHER','ACTIVE'),
-  (5, 'gv002',  'Trần Thị B',      'gv002@school.local',  '0901000002', 'TEACHER','ACTIVE'),
-  (8, 'gv003',  'Lê Văn C',        'gv003@school.local',  '0901000003', 'TEACHER','ACTIVE'),
-  (3, 'hs001',  'Nguyễn Văn Học',  'hs001@school.local',  '0902000001', 'STUDENT','ACTIVE'),
-  (6, 'hs002',  'Trần Thị Học',    'hs002@school.local',  '0902000002', 'STUDENT','ACTIVE'),
-  (7, 'hs003',  'Lê Minh K',       'hs003@school.local',  '0902000003', 'STUDENT','LOCKED');
+INSERT INTO users (id, username, password, fullname, email, phone, role, status) VALUES
+  (1, 'admin1', 'AbcdefGh', 'Quản trị viên 1', 'admin1@school.local', '0900000001', 'ADMIN',  'ACTIVE'),
+  (2, 'gv001',  'AbcdefGh', 'Nguyễn Văn A',    'gv001@school.local',  '0901000001', 'TEACHER','ACTIVE'),
+  (5, 'gv002',  'AbcdefGh', 'Trần Thị B',      'gv002@school.local',  '0901000002', 'TEACHER','ACTIVE'),
+  (8, 'gv003',  'AbcdefGh', 'Lê Văn C',        'gv003@school.local',  '0901000003', 'TEACHER','ACTIVE'),
+  (3, 'hs001',  'AbcdefGh', 'Nguyễn Văn Học',  'hs001@school.local',  '0902000001', 'STUDENT','ACTIVE'),
+  (6, 'hs002',  'AbcdefGh', 'Trần Thị Học',    'hs002@school.local',  '0902000002', 'STUDENT','ACTIVE'),
+  (7, 'hs003',  'AbcdefGh', 'Lê Minh K',       'hs003@school.local',  '0902000003', 'STUDENT','LOCKED');
 
 -- ===============================
 -- BẢNG classes
 -- ===============================
 CREATE TABLE classes (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,               -- "10A1"
-  grade INT NOT NULL,                       -- 10,11,...
-  year_start INT NOT NULL,                  -- 2025
-  year_end INT NOT NULL,                    -- 2026
+  name VARCHAR(100) NOT NULL,
+  grade INT NOT NULL,
+  year_start INT NOT NULL,
+  year_end INT NOT NULL,
 
-  homeroom_teacher_id VARCHAR(20) NULL,     -- "GV001"
-  homeroom_teacher_name VARCHAR(100) NULL,  -- "Nguyễn Văn A"
+  homeroom_teacher_id VARCHAR(20) NULL,
+  homeroom_teacher_name VARCHAR(100) NULL,
 
   capacity INT NULL,
   total_students INT DEFAULT 0,
@@ -64,22 +66,31 @@ CREATE TABLE classes (
   updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- SEED classes
+INSERT INTO classes
+  (name, grade, year_start, year_end,
+   homeroom_teacher_id, homeroom_teacher_name,
+   capacity, total_students, boys_count, girls_count, status)
+VALUES
+  ('10A1', 10, 2025, 2026, 'GV001', 'Nguyễn Văn A', 45, 40, 20, 20, 'ACTIVE'),
+  ('11A3', 11, 2025, 2026, 'GV002', 'Trần Thị B', 45, 42, 18, 24, 'ACTIVE');
+
 -- ===============================
 -- BẢNG students
 -- ===============================
 CREATE TABLE students (
   id VARCHAR(20) PRIMARY KEY,               -- "HS001"
-  userid INT NULL,                         -- liên kết users.id sau này
+  userid INT NOT NULL UNIQUE,                      -- liên kết users.id (BẮT BUỘC)
 
   fullname VARCHAR(100) NOT NULL,
-  dob DATE NULL,
-  gender ENUM('M','F','O') DEFAULT 'O',
+  dob DATE NOT NULL,
+  gender ENUM('M','F','O') NOT NULL,
   address VARCHAR(255) NULL,
 
-  current_class_id INT NULL,                -- FK tới classes.id
+  current_class_id INT NOT NULL,            -- FK tới classes.id (BẮT BUỘC)
 
-  guardian_name VARCHAR(100) NULL,
-  guardian_phone VARCHAR(20) NULL,
+  guardian_name VARCHAR(100) NOT NULL,
+  guardian_phone VARCHAR(20) NOT NULL,
   guardian_job VARCHAR(100) NULL,
   guardian_citizenid VARCHAR(20) NULL,
 
@@ -89,76 +100,48 @@ CREATE TABLE students (
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
+  CONSTRAINT fk_students_user
+    FOREIGN KEY (userid)
+    REFERENCES users(id)
+    ON UPDATE CASCADE
+    ON DELETE RESTRICT,
+
   CONSTRAINT fk_students_class
     FOREIGN KEY (current_class_id)
     REFERENCES classes(id)
     ON UPDATE CASCADE
-    ON DELETE SET NULL
+    ON DELETE RESTRICT
 );
 
--- 5. SEED DATA DEMO (CÓ THỂ XOÁ NẾU MUỐN DB RỖNG)
-INSERT INTO classes
-  (name, grade, year_start, year_end,
-   homeroom_teacher_id, homeroom_teacher_name,
-   capacity, total_students, boys_count, girls_count, status)
-VALUES
-  ('10A1', 10, 2025, 2026, 'GV001', 'Nguyễn Văn A', 45, 40, 20, 20, 'ACTIVE'),
-  ('11A3', 11, 2025, 2026, 'GV002', 'Trần Thị B', 45, 42, 18, 24, 'ACTIVE');
-
+-- SEED students
 INSERT INTO students
   (id, userid, fullname, dob, gender, address, current_class_id,
    guardian_name, guardian_phone, guardian_job, guardian_citizenid,
    status, note)
 VALUES
-  ('HS001', 3, 'Nguyễn Văn Học', '2010-03-15', 'M', 'TP. HCM', 1,
+  ('HS001', 3, 'Nguyễn Văn Học', '2015-03-15', 'M', 'TP. HCM', 1,
    'Nguyễn Văn Bố', '0902000001', 'Kỹ sư', '079123456789',
    'ACTIVE', ''),
-  ('HS002', 6, 'Trần Thị Học', '2010-07-10', 'F', 'TP. HCM', 1,
+  ('HS002', 6, 'Trần Thị Học', '2015-07-10', 'F', 'TP. HCM', 1,
    'Trần Văn Mẹ', '0902000002', 'Giáo viên', '079123456780',
    'ACTIVE', ''),
-  ('HS003', 7, 'Lê Minh K', '2009-11-20', 'M', 'Đồng Nai', 2,
+  ('HS003', 7, 'Lê Minh K', '2014-11-20', 'M', 'Đồng Nai', 2,
    'Lê Văn Cha', '0902000003', 'Công nhân', '079123456781',
    'INACTIVE', 'Chuyển trường');
 
 -- ===============================
 -- BẢNG subjects
 -- ===============================
-DROP TABLE IF EXISTS subjects;
-
 CREATE TABLE subjects (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,            -- "Toán"
-  code VARCHAR(20) NOT NULL,             -- "MATH"
-  grade INT NOT NULL,                    -- 10,11,12...
-  is_optional TINYINT(1) DEFAULT 0,      -- 0: bắt buộc, 1: tự chọn
+  name VARCHAR(100) NOT NULL,
+  code VARCHAR(20) NOT NULL,
+  grade INT NOT NULL,
+  is_optional TINYINT(1) DEFAULT 0,
   status ENUM('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_subject_code_grade (code, grade)
-);
-
--- ===============================
--- BẢNG teachers
--- ===============================
-DROP TABLE IF EXISTS teachers;
-
-CREATE TABLE teachers (
-  id VARCHAR(20) PRIMARY KEY,            -- "GV001" (mã GV)
-  userid INT NULL,                      -- liên kết users.id sau này
-  fullname VARCHAR(100) NOT NULL,
-  dob DATE NULL,
-  gender ENUM('M','F','O') DEFAULT 'O',
-  address VARCHAR(255) NULL,
-  phone VARCHAR(20) NULL,
-  citizenid VARCHAR(20) NULL,
-
-  mainsubject VARCHAR(100) NULL,        -- giữ dạng text cho khớp mock hiện tại
-
-  status ENUM('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
-  note TEXT NULL,
-
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 INSERT INTO subjects (name, code, grade, is_optional, status) VALUES
@@ -169,16 +152,40 @@ INSERT INTO subjects (name, code, grade, is_optional, status) VALUES
   ('Hóa học',   'CHEM', 10, 0, 'ACTIVE'),
   ('Sinh học',  'BIO',  10, 0, 'ACTIVE');
 
+-- ===============================
+-- BẢNG teachers
+-- ===============================
+CREATE TABLE teachers (
+  id VARCHAR(20) PRIMARY KEY,            -- "GV001"
+  userid INT NOT NULL UNIQUE,            -- 1-1 với users.id
+
+  fullname VARCHAR(100) NOT NULL,
+  dob DATE NOT NULL,
+  gender ENUM('M','F','O') NOT NULL,
+  address VARCHAR(255) NULL,
+  phone VARCHAR(20) NOT NULL,
+  citizenid VARCHAR(20) NOT NULL,
+  mainsubject VARCHAR(100) NOT NULL,
+
+  status ENUM('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
+  note TEXT NULL,
+
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_teachers_user
+    FOREIGN KEY (userid)
+    REFERENCES users(id)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+);
+
 INSERT INTO teachers
-  (id, userid, fullname, dob, gender, address, phone,
-   citizenid, mainsubject, status, note)
+  (id, userid, fullname, dob, gender, address, phone, citizenid, mainsubject, status, note)
 VALUES
-  ('GV001', 2, 'Nguyễn Văn A', '1985-01-15', 'M', 'TP. HCM',
-   '0901000001', '012345678901', 'Toán',      'ACTIVE', ''),
-  ('GV002', 5, 'Trần Thị B',   '1987-04-20', 'F', 'TP. HCM',
-   '0901000002', '012345678902', 'Ngữ văn',   'ACTIVE', ''),
-  ('GV003', 8, 'Lê Văn C',     '1982-09-10', 'M', 'Đồng Nai',
-   '0901000003', '012345678903', 'Tiếng Anh', 'ACTIVE', '');
+  ('GV001', 2, 'Nguyễn Văn A', '1985-01-15', 'M', 'TP. HCM',  '0901000001', '012345678901', 'Toán',      'ACTIVE', ''),
+  ('GV002', 5, 'Trần Thị B',   '1987-04-20', 'F', 'TP. HCM',  '0901000002', '012345678902', 'Ngữ văn',   'ACTIVE', ''),
+  ('GV003', 8, 'Lê Văn C',     '1982-09-10', 'M', 'Đồng Nai', '0901000003', '012345678903', 'Tiếng Anh', 'ACTIVE', '');
 
 -- ===============================
 -- BẢNG class_subjects (phân công giảng dạy)

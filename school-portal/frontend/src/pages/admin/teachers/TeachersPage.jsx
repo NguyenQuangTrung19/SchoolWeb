@@ -28,10 +28,10 @@ import {
   Divider,
   Avatar,
   Paper,
-  TableContainer,
   Tooltip,
   Snackbar,
   Alert,
+  TableContainer,
 } from "@mui/material";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import AppLayout from "../../../components/layout/AppLayout";
@@ -40,6 +40,7 @@ import {
   createTeacher,
   updateTeacher,
   deleteTeacher,
+  getTeacherById, // ✅ thêm
 } from "../../../api/teachersApi";
 import { getSubjects } from "../../../api/subjectsApi";
 
@@ -51,6 +52,7 @@ export default function AdminTeachersPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "ADMIN";
+  const isTeacher = user?.role === "TEACHER";
 
   // Filter & pagination
   const [search, setSearch] = useState("");
@@ -74,12 +76,13 @@ export default function AdminTeachersPage() {
     mainsubject: "",
     status: "ACTIVE",
     note: "",
+    password: "",
   });
 
   const [toast, setToast] = useState({
     open: false,
     message: "",
-    severity: "success", // success | info | warning | error
+    severity: "success",
   });
 
   const showToast = (message, severity = "success") => {
@@ -93,10 +96,24 @@ export default function AdminTeachersPage() {
 
   const [openDrawer, setOpenDrawer] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [drawerLoading, setDrawerLoading] = useState(false);
 
-  const openTeacherDrawer = (t) => {
+  // ✅ nếu admin: mở drawer thì fetch chi tiết với includePassword=1 để chắc chắn có password
+  const openTeacherDrawer = async (t) => {
     setSelectedTeacher(t);
     setOpenDrawer(true);
+
+    if (!isAdmin) return;
+
+    try {
+      setDrawerLoading(true);
+      const detail = await getTeacherById(t.id, { includePassword: 1 });
+      setSelectedTeacher(detail);
+    } catch (e) {
+      showToast(e?.message || "Không tải được chi tiết giáo viên", "error");
+    } finally {
+      setDrawerLoading(false);
+    }
   };
 
   const closeTeacherDrawer = () => {
@@ -118,7 +135,7 @@ export default function AdminTeachersPage() {
   const isValidCitizenId = (s = "") => /^\d{12}$/.test(s);
 
   const isAllowedEmail = (email) => {
-    if (!email) return true;
+    if (!email) return false;
     const e = email.trim().toLowerCase();
     const basic = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
     if (!basic) return false;
@@ -132,7 +149,7 @@ export default function AdminTeachersPage() {
   };
 
   const isAtLeast18 = (dobStr) => {
-    if (!dobStr) return true;
+    if (!dobStr) return false;
     const dob = new Date(dobStr);
     if (Number.isNaN(dob.getTime())) return false;
 
@@ -169,7 +186,7 @@ export default function AdminTeachersPage() {
   const teachersQuery = useQuery({
     queryKey: [
       "teachers",
-      { page, pageSize, search, subjectFilter, statusFilter },
+      { page, pageSize, search, subjectFilter, statusFilter, isAdmin },
     ],
     queryFn: () =>
       getTeachers({
@@ -178,6 +195,7 @@ export default function AdminTeachersPage() {
         search,
         subject: subjectFilter,
         status: statusFilter,
+        includePassword: isAdmin ? 1 : 0, // ✅ admin only
       }),
     keepPreviousData: true,
   });
@@ -192,49 +210,58 @@ export default function AdminTeachersPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // robust: apiGet thường trả {data,total}
   const subjectOptions = useMemo(() => {
     const d = subjectsQuery.data;
     if (!d) return [];
-    // trường hợp getSubjects trả {data,total}
     if (Array.isArray(d.data)) return d.data;
-    // trường hợp trả thẳng array
     if (Array.isArray(d)) return d;
     return [];
   }, [subjectsQuery.data]);
 
   const createMutation = useMutation({
     mutationFn: (payload) => createTeacher(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries(["teachers"]);
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
       handleCloseDialog();
-      showToast("Đã tạo giáo viên", "success");
+
+      if (isAdmin && created?.password) {
+        showToast(`Đã tạo GV. Password: ${created.password}`, "success");
+      } else {
+        showToast("Đã tạo giáo viên", "success");
+      }
     },
-    onError: () => showToast("Tạo giáo viên thất bại", "error"),
+    onError: (err) => {
+      const msg = err?.message || "Tạo giáo viên thất bại";
+      showToast(msg, "error");
+    },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }) => updateTeacher(id, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries(["teachers"]);
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
       handleCloseDialog();
       showToast("Đã cập nhật giáo viên", "success");
     },
-    onError: () => showToast("Cập nhật thất bại", "error"),
+    onError: (err) => {
+      const msg = err?.message || "Cập nhật thất bại";
+      showToast(msg, "error");
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => deleteTeacher(id),
     onSuccess: () => {
-      queryClient.invalidateQueries(["teachers"]);
+      queryClient.invalidateQueries({ queryKey: ["teachers"] });
       showToast("Đã xóa giáo viên", "success");
     },
-    onError: () => showToast("Xóa thất bại", "error"),
+    onError: (err) => {
+      const msg = err?.message || "Xóa thất bại";
+      showToast(msg, "error");
+    },
   });
 
-  const handleChangePage = (e, newPage) => {
-    setPage(newPage);
-  };
+  const handleChangePage = (e, newPage) => setPage(newPage);
 
   const handleChangeRowsPerPage = (e) => {
     setPageSize(parseInt(e.target.value, 10));
@@ -255,6 +282,7 @@ export default function AdminTeachersPage() {
       mainsubject: "",
       status: "ACTIVE",
       note: "",
+      password: "",
     });
     setOpenDialog(true);
   };
@@ -264,7 +292,7 @@ export default function AdminTeachersPage() {
     setFormValues({
       id: teacher.id,
       fullname: teacher.fullname,
-      email: teacher.email,
+      email: teacher.email || "",
       dob: toDateInputValue(teacher.dob),
       gender: teacher.gender || "",
       address: teacher.address || "",
@@ -273,6 +301,7 @@ export default function AdminTeachersPage() {
       mainsubject: teacher.mainsubject || "",
       status: teacher.status || "ACTIVE",
       note: teacher.note || "",
+      password: teacher.password || "",
     });
     setOpenDialog(true);
   };
@@ -287,71 +316,74 @@ export default function AdminTeachersPage() {
   };
 
   const handleSubmitForm = () => {
+    if (!isAdmin) {
+      showToast("Chỉ ADMIN mới được thao tác giáo viên", "warning");
+      return;
+    }
+
     const fullname = toTitleCase(formValues.fullname || "");
-    const email = formValues.email?.trim() || "";
+    const email = (formValues.email || "").trim();
     const dob = formValues.dob || "";
     const gender = formValues.gender || "";
     const address = formValues.address?.trim() || "";
-    const phoneDigits = formValues.phone
-      ? normalizeDigits(formValues.phone)
-      : "";
-    const citizenDigits = formValues.citizenid
-      ? normalizeDigits(formValues.citizenid)
-      : "";
+    const phoneDigits = normalizeDigits(formValues.phone || "");
+    const citizenDigits = normalizeDigits(formValues.citizenid || "");
     const mainsubject = formValues.mainsubject || "";
     const status = formValues.status || "ACTIVE";
     const note = formValues.note?.trim() || "";
 
-    if (!fullname) {
+    if (!fullname)
       return showToast("Vui lòng nhập họ tên giáo viên", "warning");
-    }
-
-    if (email && !isAllowedEmail(email)) {
-      showToast(
-        "Email không hợp lệ. Chỉ chấp nhận @gmail.com hoặc domain .edu/.edu.vn/.ac.vn"
+    if (!email) return showToast("Vui lòng nhập email", "warning");
+    if (!isAllowedEmail(email))
+      return showToast(
+        "Email không hợp lệ. Chỉ chấp nhận @gmail.com hoặc .edu/.edu.vn/.ac.vn",
+        "warning"
       );
-      return;
-    }
 
-    if (dob && !isAtLeast18(dob)) {
-      showToast("Giáo viên phải đủ 18 tuổi. Vui lòng nhập lại ngày sinh.");
-      return;
-    }
+    if (!dob) return showToast("Vui lòng nhập ngày sinh", "warning");
+    if (!isAtLeast18(dob))
+      return showToast(
+        "Giáo viên phải đủ 18 tuổi. Vui lòng nhập lại.",
+        "warning"
+      );
 
-    if (phoneDigits && !isValidPhoneVN(phoneDigits)) {
-      showToast("SĐT không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.");
-      return;
-    }
+    if (!gender) return showToast("Vui lòng chọn giới tính", "warning");
 
-    if (citizenDigits && !isValidCitizenId(citizenDigits)) {
-      showToast("CCCD không hợp lệ. CCCD phải đủ 12 số.");
-      return;
-    }
+    if (!phoneDigits)
+      return showToast("Vui lòng nhập số điện thoại", "warning");
+    if (!isValidPhoneVN(phoneDigits))
+      return showToast(
+        "SĐT không hợp lệ. Phải bắt đầu bằng 0 và đủ 10 số.",
+        "warning"
+      );
+
+    if (!citizenDigits) return showToast("Vui lòng nhập CCCD", "warning");
+    if (!isValidCitizenId(citizenDigits))
+      return showToast("CCCD không hợp lệ. CCCD phải đủ 12 số.", "warning");
+
+    if (!mainsubject) return showToast("Vui lòng chọn môn chính", "warning");
+
+    if (formValues.fullname !== fullname)
+      handleFormChange("fullname", fullname);
+    if (formValues.phone !== phoneDigits)
+      handleFormChange("phone", phoneDigits);
+    if (formValues.citizenid !== citizenDigits)
+      handleFormChange("citizenid", citizenDigits);
 
     const payload = {
       ...(formValues.id?.trim() ? { id: formValues.id.trim() } : {}),
-
       fullname,
-      email: email || undefined,
-      dob: dob || undefined,
-      gender: gender || undefined,
+      email,
+      dob,
+      gender,
+      phone: phoneDigits,
+      citizenid: citizenDigits,
+      mainsubject,
+      status,
       address: address || undefined,
-      phone: phoneDigits || undefined,
-      citizenid: citizenDigits || undefined,
-      mainsubject: mainsubject || undefined,
-      status: status || undefined,
       note: note || undefined,
     };
-
-    if (formValues.fullname !== fullname) {
-      handleFormChange("fullname", fullname);
-    }
-    if (formValues.phone && phoneDigits !== formValues.phone) {
-      handleFormChange("phone", phoneDigits);
-    }
-    if (formValues.citizenid && citizenDigits !== formValues.citizenid) {
-      handleFormChange("citizenid", citizenDigits);
-    }
 
     if (editingTeacher) {
       const { id, ...rest } = payload;
@@ -362,6 +394,10 @@ export default function AdminTeachersPage() {
   };
 
   const handleDeleteTeacher = (teacher) => {
+    if (!isAdmin) {
+      showToast("Chỉ ADMIN mới được xóa giáo viên", "warning");
+      return;
+    }
     if (window.confirm(`Bạn có chắc muốn xóa giáo viên ${teacher.fullname}?`)) {
       deleteMutation.mutate(teacher.id);
     }
@@ -377,7 +413,6 @@ export default function AdminTeachersPage() {
         Quản lý giáo viên
       </Typography>
 
-      {/* Bộ lọc */}
       <Paper sx={{ p: 2, mb: 2, borderRadius: 3 }}>
         <Box display="flex" gap={2} mb={2} flexWrap="wrap">
           <TextField
@@ -402,7 +437,6 @@ export default function AdminTeachersPage() {
               }}
             >
               <MenuItem value="ALL">Tất cả</MenuItem>
-
               {subjectOptions.map((s) => (
                 <MenuItem key={s.id} value={s.name}>
                   {s.name} ({s.code})
@@ -435,86 +469,103 @@ export default function AdminTeachersPage() {
             </Button>
           )}
         </Box>
+
+        {/* ✅ hint role */}
+        {isTeacher && (
+          <Typography variant="caption" color="text.secondary">
+            Bạn đang đăng nhập với quyền Giáo viên: chỉ xem danh sách/chi tiết,
+            không thể thêm/sửa/xóa.
+          </Typography>
+        )}
       </Paper>
 
-      {/* Bảng giáo viên */}
       {isLoading ? (
         <div>Đang tải...</div>
       ) : (
         <Paper sx={{ borderRadius: 3, overflow: "hidden" }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Mã GV</TableCell>
-                <TableCell>Họ tên</TableCell>
-                <TableCell>Môn chính</TableCell>
-                <TableCell>SĐT</TableCell>
-                <TableCell>CCCD</TableCell>
-                <TableCell>Giới tính</TableCell>
-                <TableCell>Trạng thái</TableCell>
-                <TableCell align="right">Hành động</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {rows.map((t) => (
-                <TableRow
-                  key={t.id}
-                  hover
-                  sx={{ cursor: "pointer" }}
-                  onClick={() => openTeacherDrawer(t)}
-                >
-                  <TableCell>{t.id}</TableCell>
-                  <TableCell>{t.fullname}</TableCell>
-                  <TableCell>{t.mainsubject}</TableCell>
-                  <TableCell>{t.phone}</TableCell>
-                  <TableCell>{t.citizenid}</TableCell>
-                  <TableCell>
-                    {t.gender === "M" ? "Nam" : t.gender === "F" ? "Nữ" : ""}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={t.status}
-                      color={t.status === "ACTIVE" ? "success" : "default"}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    {isAdmin && (
-                      <>
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEdit(t);
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteTeacher(t);
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-
-              {rows.length === 0 && (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={8} align="center">
-                    Không có giáo viên nào
-                  </TableCell>
+                  <TableCell>Mã GV</TableCell>
+                  <TableCell>Họ tên</TableCell>
+                  <TableCell>Môn chính</TableCell>
+                  <TableCell>SĐT</TableCell>
+                  <TableCell>CCCD</TableCell>
+                  <TableCell>Giới tính</TableCell>
+                  <TableCell>Trạng thái</TableCell>
+                  <TableCell align="right">Hành động</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHead>
+              <TableBody>
+                {rows.map((t) => (
+                  <TableRow
+                    key={t.id}
+                    hover
+                    sx={{ cursor: "pointer" }}
+                    onClick={() => openTeacherDrawer(t)}
+                  >
+                    <TableCell>{t.id}</TableCell>
+                    <TableCell>{t.fullname}</TableCell>
+                    <TableCell>{t.mainsubject}</TableCell>
+                    <TableCell>{t.phone}</TableCell>
+                    <TableCell>{t.citizenid}</TableCell>
+                    <TableCell>
+                      {t.gender === "M"
+                        ? "Nam"
+                        : t.gender === "F"
+                        ? "Nữ"
+                        : "Khác"}
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={t.status}
+                        color={t.status === "ACTIVE" ? "success" : "default"}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      {isAdmin ? (
+                        <>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(t);
+                            }}
+                          >
+                            <EditIcon fontSize="small" />
+                          </IconButton>
+
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteTeacher(t);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </>
+                      ) : (
+                        <Typography variant="caption" color="text.secondary">
+                          Chỉ xem
+                        </Typography>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {rows.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} align="center">
+                      Không có giáo viên nào
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
 
           <TablePagination
             component="div"
@@ -528,7 +579,7 @@ export default function AdminTeachersPage() {
         </Paper>
       )}
 
-      {/* Dialog thêm/sửa giáo viên */}
+      {/* Dialog thêm/sửa (Admin only) */}
       <Dialog
         open={openDialog}
         onClose={handleCloseDialog}
@@ -548,13 +599,14 @@ export default function AdminTeachersPage() {
                     value={formValues.id}
                     onChange={(e) => handleFormChange("id", e.target.value)}
                     fullWidth
-                    placeholder="VD: GV010 (bỏ trống để hệ thống tự tạo)"
+                    placeholder="VD: GV010 (bỏ trống để tự tạo)"
                   />
                 </Grid>
               )}
-              <Grid item xs={12} sm={editingTeacher ? 6 : 8}>
+
+              <Grid item xs={12} sm={8}>
                 <TextField
-                  label="Họ tên giáo viên"
+                  label="Họ tên giáo viên *"
                   value={formValues.fullname}
                   onChange={(e) => handleFormChange("fullname", e.target.value)}
                   onBlur={() =>
@@ -566,18 +618,19 @@ export default function AdminTeachersPage() {
                   fullWidth
                 />
               </Grid>
+
               <Grid item xs={12} sm={6}>
                 <TextField
-                  label="Email"
+                  label="Email *"
                   value={formValues.email}
                   onChange={(e) => handleFormChange("email", e.target.value)}
                   fullWidth
                 />
               </Grid>
 
-              <Grid item xs={12} sm={4}>
+              <Grid item xs={12} sm={6}>
                 <TextField
-                  label="Ngày sinh"
+                  label="Ngày sinh *"
                   type="date"
                   value={formValues.dob}
                   onChange={(e) => handleFormChange("dob", e.target.value)}
@@ -588,13 +641,13 @@ export default function AdminTeachersPage() {
 
               <Grid item xs={12} sm={4}>
                 <FormControl fullWidth>
-                  <InputLabel>Giới tính</InputLabel>
+                  <InputLabel>Giới tính *</InputLabel>
                   <Select
-                    label="Giới tính"
+                    label="Giới tính *"
                     value={formValues.gender}
                     onChange={(e) => handleFormChange("gender", e.target.value)}
                   >
-                    <MenuItem value="">Chưa chọn</MenuItem>
+                    <MenuItem value="">Chọn</MenuItem>
                     <MenuItem value="M">Nam</MenuItem>
                     <MenuItem value="F">Nữ</MenuItem>
                     <MenuItem value="O">Khác</MenuItem>
@@ -604,7 +657,7 @@ export default function AdminTeachersPage() {
 
               <Grid item xs={12} sm={4}>
                 <TextField
-                  label="SĐT"
+                  label="SĐT *"
                   value={formValues.phone}
                   onChange={(e) => handleFormChange("phone", e.target.value)}
                   fullWidth
@@ -613,7 +666,7 @@ export default function AdminTeachersPage() {
 
               <Grid item xs={12} sm={4}>
                 <TextField
-                  label="CCCD"
+                  label="CCCD *"
                   value={formValues.citizenid}
                   onChange={(e) =>
                     handleFormChange("citizenid", e.target.value)
@@ -624,7 +677,7 @@ export default function AdminTeachersPage() {
 
               <Grid item xs={12} sm={8}>
                 <TextField
-                  label="Địa chỉ"
+                  label="Địa chỉ (không bắt buộc)"
                   value={formValues.address}
                   onChange={(e) => handleFormChange("address", e.target.value)}
                   fullWidth
@@ -633,16 +686,15 @@ export default function AdminTeachersPage() {
 
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
-                  <InputLabel>Môn chính</InputLabel>
+                  <InputLabel>Môn chính *</InputLabel>
                   <Select
-                    label="Môn chính"
+                    label="Môn chính *"
                     value={formValues.mainsubject || ""}
                     onChange={(e) =>
                       handleFormChange("mainsubject", e.target.value)
                     }
                   >
-                    <MenuItem value="">Chưa chọn</MenuItem>
-
+                    <MenuItem value="">Chọn</MenuItem>
                     {subjectOptions.map((s) => (
                       <MenuItem key={s.id} value={s.name}>
                         {s.name} ({s.code})
@@ -668,7 +720,7 @@ export default function AdminTeachersPage() {
 
               <Grid item xs={12}>
                 <TextField
-                  label="Ghi chú"
+                  label="Ghi chú (không bắt buộc)"
                   value={formValues.note}
                   onChange={(e) => handleFormChange("note", e.target.value)}
                   fullWidth
@@ -676,6 +728,21 @@ export default function AdminTeachersPage() {
                   minRows={2}
                 />
               </Grid>
+
+              {isAdmin && (
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    label="Mật khẩu"
+                    value={
+                      editingTeacher
+                        ? formValues.password || ""
+                        : "(Sẽ tự sinh khi bấm Lưu)"
+                    }
+                    fullWidth
+                    disabled
+                  />
+                </Grid>
+              )}
             </Grid>
           </Box>
         </DialogContent>
@@ -691,6 +758,7 @@ export default function AdminTeachersPage() {
         </DialogActions>
       </Dialog>
 
+      {/* Drawer */}
       <Drawer
         anchor="right"
         open={openDrawer}
@@ -706,7 +774,6 @@ export default function AdminTeachersPage() {
       >
         {!selectedTeacher ? null : (
           <Stack spacing={2.25} sx={{ height: "100%" }}>
-            {/* Header */}
             <Box
               sx={{
                 p: 1.75,
@@ -733,14 +800,12 @@ export default function AdminTeachersPage() {
                     {selectedTeacher.fullname}
                   </Typography>
 
-                  {/* ID + subject + copy */}
                   <Stack
                     direction="row"
                     spacing={1}
                     alignItems="center"
                     sx={{ mt: 0.25 }}
                   >
-                    {/* Mã GV + copy dính sát */}
                     <Stack direction="row" spacing={0.25} alignItems="center">
                       <Typography variant="body2" color="text.secondary">
                         {selectedTeacher.id}
@@ -780,149 +845,183 @@ export default function AdminTeachersPage() {
               </Stack>
             </Box>
 
-            {/* Info card */}
-            <Box
-              sx={{
-                p: 1.75,
-                borderRadius: 3,
-                border: "1px solid",
-                borderColor: "divider",
-                bgcolor: "background.default",
-              }}
-            >
-              <Stack spacing={1.25}>
-                {/* Email row */}
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ width: 92, flexShrink: 0 }}
-                  >
-                    Email
-                  </Typography>
+            {drawerLoading ? (
+              <Typography>Đang tải chi tiết...</Typography>
+            ) : (
+              <Box
+                sx={{
+                  p: 1.75,
+                  borderRadius: 3,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  bgcolor: "background.default",
+                }}
+              >
+                <Stack spacing={1.25}>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ width: 92, flexShrink: 0 }}
+                    >
+                      Email
+                    </Typography>
 
-                  <Typography
-                    variant="body2"
-                    sx={{ flex: 1, minWidth: 0 }}
-                    noWrap
-                  >
-                    {selectedTeacher.email || "-"}
-                  </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ flex: 1, minWidth: 0 }}
+                      noWrap
+                    >
+                      {selectedTeacher.email || "-"}
+                    </Typography>
 
-                  {selectedTeacher.email && (
-                    <Tooltip title="Copy email">
-                      <IconButton
-                        size="small"
-                        sx={{ p: 0.25 }}
-                        onClick={() =>
-                          copyToClipboard(selectedTeacher.email, "email")
-                        }
+                    {selectedTeacher.email && (
+                      <Tooltip title="Copy email">
+                        <IconButton
+                          size="small"
+                          sx={{ p: 0.25 }}
+                          onClick={() =>
+                            copyToClipboard(selectedTeacher.email, "email")
+                          }
+                        >
+                          <ContentCopyIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Stack>
+
+                  {/* ✅ password only admin, and only if API includePassword returned it */}
+                  {isAdmin && (
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ width: 92, flexShrink: 0 }}
                       >
-                        <ContentCopyIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                </Stack>
+                        Password
+                      </Typography>
 
-                {/* DOB */}
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ width: 92, flexShrink: 0 }}
-                  >
-                    Ngày sinh
-                  </Typography>
-                  <Typography variant="body2">
-                    {toDateInputValue(selectedTeacher.dob) || "-"}
-                  </Typography>
-                </Stack>
-
-                {/* Gender */}
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ width: 92, flexShrink: 0 }}
-                  >
-                    Giới tính
-                  </Typography>
-                  <Typography variant="body2">
-                    {selectedTeacher.gender === "M"
-                      ? "Nam"
-                      : selectedTeacher.gender === "F"
-                      ? "Nữ"
-                      : "Khác"}
-                  </Typography>
-                </Stack>
-
-                {/* Phone + copy */}
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ width: 92, flexShrink: 0 }}
-                  >
-                    Số điện thoại
-                  </Typography>
-
-                  <Typography
-                    variant="body2"
-                    sx={{ flex: 1, minWidth: 0 }}
-                    noWrap
-                  >
-                    {selectedTeacher.phone || "-"}
-                  </Typography>
-
-                  {selectedTeacher.phone && (
-                    <Tooltip title="Copy số điện thoại">
-                      <IconButton
-                        size="small"
-                        sx={{ p: 0.25 }}
-                        onClick={() =>
-                          copyToClipboard(
-                            selectedTeacher.phone,
-                            "số điện thoại"
-                          )
-                        }
+                      <Typography
+                        variant="body2"
+                        sx={{ flex: 1, minWidth: 0 }}
+                        noWrap
                       >
-                        <ContentCopyIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Tooltip>
+                        {selectedTeacher.password || "-"}
+                      </Typography>
+
+                      {selectedTeacher.password && (
+                        <Tooltip title="Copy password">
+                          <IconButton
+                            size="small"
+                            sx={{ p: 0.25 }}
+                            onClick={() =>
+                              copyToClipboard(
+                                selectedTeacher.password,
+                                "password"
+                              )
+                            }
+                          >
+                            <ContentCopyIcon sx={{ fontSize: 16 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
                   )}
-                </Stack>
 
-                {/* CCCD */}
-                <Stack direction="row" alignItems="center" spacing={1}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ width: 92, flexShrink: 0 }}
-                  >
-                    CCCD
-                  </Typography>
-                  <Typography variant="body2">
-                    {selectedTeacher.citizenid || "-"}
-                  </Typography>
-                </Stack>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ width: 92, flexShrink: 0 }}
+                    >
+                      Ngày sinh
+                    </Typography>
+                    <Typography variant="body2">
+                      {toDateInputValue(selectedTeacher.dob) || "-"}
+                    </Typography>
+                  </Stack>
 
-                {/* Address */}
-                <Stack direction="row" alignItems="flex-start" spacing={1}>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ width: 92, flexShrink: 0, pt: 0.25 }}
-                  >
-                    Địa chỉ
-                  </Typography>
-                  <Typography variant="body2" sx={{ flex: 1 }}>
-                    {selectedTeacher.address || "-"}
-                  </Typography>
-                </Stack>
-              </Stack>
-            </Box>
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ width: 92, flexShrink: 0 }}
+                    >
+                      Giới tính
+                    </Typography>
+                    <Typography variant="body2">
+                      {selectedTeacher.gender === "M"
+                        ? "Nam"
+                        : selectedTeacher.gender === "F"
+                        ? "Nữ"
+                        : "Khác"}
+                    </Typography>
+                  </Stack>
 
-            {/* Note */}
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ width: 92, flexShrink: 0 }}
+                    >
+                      Số điện thoại
+                    </Typography>
+
+                    <Typography
+                      variant="body2"
+                      sx={{ flex: 1, minWidth: 0 }}
+                      noWrap
+                    >
+                      {selectedTeacher.phone || "-"}
+                    </Typography>
+
+                    {selectedTeacher.phone && (
+                      <Tooltip title="Copy số điện thoại">
+                        <IconButton
+                          size="small"
+                          sx={{ p: 0.25 }}
+                          onClick={() =>
+                            copyToClipboard(
+                              selectedTeacher.phone,
+                              "số điện thoại"
+                            )
+                          }
+                        >
+                          <ContentCopyIcon sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Stack>
+
+                  <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ width: 92, flexShrink: 0 }}
+                    >
+                      CCCD
+                    </Typography>
+                    <Typography variant="body2">
+                      {selectedTeacher.citizenid || "-"}
+                    </Typography>
+                  </Stack>
+
+                  <Stack direction="row" alignItems="flex-start" spacing={1}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ width: 92, flexShrink: 0, pt: 0.25 }}
+                    >
+                      Địa chỉ
+                    </Typography>
+                    <Typography variant="body2" sx={{ flex: 1 }}>
+                      {selectedTeacher.address || "-"}
+                    </Typography>
+                  </Stack>
+                </Stack>
+              </Box>
+            )}
+
             <Box>
               <Typography
                 variant="subtitle2"
@@ -939,7 +1038,6 @@ export default function AdminTeachersPage() {
 
             <Box flexGrow={1} />
 
-            {/* Actions */}
             <Divider />
             <Stack direction="row" spacing={1} justifyContent="flex-end">
               <Button onClick={closeTeacherDrawer}>Đóng</Button>
@@ -972,9 +1070,10 @@ export default function AdminTeachersPage() {
           </Stack>
         )}
       </Drawer>
+
       <Snackbar
         open={toast.open}
-        autoHideDuration={2000}
+        autoHideDuration={2500}
         onClose={closeToast}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >

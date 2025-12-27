@@ -1,3 +1,4 @@
+// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -10,6 +11,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { MaterialsModule } from './materials/materials.module';
 import { ClassSubjectsModule } from './class_subjects/class-subjects.module';
 import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -33,6 +35,7 @@ import { UsersModule } from './users/users.module';
     MaterialsModule,
     ClassSubjectsModule,
     UsersModule,
+    AuthModule,
   ],
 })
 export class AppModule {}
