@@ -7,10 +7,16 @@ import { StudentEntity } from './entities/student.entity';
 import { UsersModule } from '../users/users.module';
 import { TeacherEntity } from '../teachers/entities/teacher.entity';
 import { ClassSubject } from '../class_subjects/entities/class-subject.entity';
+import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([StudentEntity, TeacherEntity, ClassSubject]),
+    TypeOrmModule.forFeature([
+      StudentEntity,
+      TeacherEntity,
+      ClassSubject,
+      User,
+    ]),
     forwardRef(() => UsersModule),
   ],
   controllers: [StudentsController],

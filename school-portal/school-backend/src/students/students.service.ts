@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { StudentEntity } from './entities/student.entity';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { UpdateStudentDto } from './dto/update-student.dto';
@@ -15,6 +15,7 @@ import { UserRole } from '../users/entities/user.entity';
 import { UpdateUserDto } from '../users/dto/update-user.dto';
 import { TeacherEntity } from '../teachers/entities/teacher.entity';
 import { ClassSubject } from '../class_subjects/entities/class-subject.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class StudentsService {
@@ -28,6 +29,10 @@ export class StudentsService {
 
     @InjectRepository(ClassSubject)
     private readonly csRepo: Repository<ClassSubject>,
+
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
+    private readonly dataSource: DataSource,
   ) {}
 
   private generatePassword8(): string {
@@ -322,8 +327,23 @@ export class StudentsService {
   }
 
   async remove(id: string) {
-    await this.repo.delete(id);
-    return { success: true };
+    return this.dataSource.transaction(async (manager) => {
+      const studentRepo = manager.getRepository(StudentEntity);
+      const userRepo = manager.getRepository(User);
+
+      const student = await studentRepo.findOne({ where: { id } });
+      if (!student) throw new NotFoundException('Student not found');
+
+      const userId = student.userid;
+
+      // 1) xóa student trước (đúng thứ tự vì student FK -> users)
+      await studentRepo.delete({ id });
+
+      // 2) xóa user sau
+      await userRepo.delete({ id: userId });
+
+      return { success: true };
+    });
   }
 
   private async generateStudentId(): Promise<string> {

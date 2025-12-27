@@ -52,6 +52,11 @@ export function deleteTeacher(id) {
   return apiDelete(`/teachers/${id}`);
 }
 
+export function getTeacherById(id, params = {}) {
+  const q = buildQuery(params);
+  return apiGet(`/teachers/${id}${q ? `?${q}` : ""}`);
+}
+
 export async function getAllTeachers() {
   const res = await apiGet("/teachers?page=0&pageSize=9999"); // { data, total }
   const arr = Array.isArray(res?.data) ? res.data : [];

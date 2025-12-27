@@ -5,10 +5,11 @@ import { TeacherEntity } from './entities/teacher.entity';
 import { TeachersController } from './teachers.controller';
 import { TeachersService } from './teachers.service';
 import { UsersModule } from '../users/users.module';
+import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TeacherEntity]),
+    TypeOrmModule.forFeature([TeacherEntity, User]),
     forwardRef(() => UsersModule),
   ],
   controllers: [TeachersController],
